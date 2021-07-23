@@ -173,3 +173,5 @@ dmypy.json
 cython_debug/
 *.pt
 07-disparity-with-remap/remap_rectify_params.yml
+models/
+*.h264
