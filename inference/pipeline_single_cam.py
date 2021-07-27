@@ -15,6 +15,7 @@ PGIE_CLASS_ID_ROADSIGN = 3
 
 
 def osd_sink_pad_buffer_probe(pad,info,u_data):
+    print('OSD cb')
     frame_number=0
     #Intiallizing object counter with 0.
     obj_counter = {
