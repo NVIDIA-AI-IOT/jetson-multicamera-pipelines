@@ -110,86 +110,50 @@ def exit_if_none(element):
     else:
         return True
 
-def main(args):
+def create_pipeline():
 
-    # Standard GStreamer initialization
-    GObject.threads_init()
-    Gst.init(None)
-
-    # Create gstreamer elements
-    # Create Pipeline element that will form a connection of other elements
-    print("Creating Pipeline \n ")
+    print("Creating Pipeline...")
     pipeline = Gst.Pipeline()
-    if not pipeline:
-        sys.stderr.write(" Unable to create Pipeline \n")
+    exit_if_none(pipeline)
 
-
-
-    # Source element for reading from the file
-    print("Creating Sources \n ")
+    print("Creating Sources...")
     source_0 = Gst.ElementFactory.make("nvarguscamerasrc", "camera-source-0")
     source_1 = Gst.ElementFactory.make("nvarguscamerasrc", "camera-source-1")
-    # source_2 = Gst.ElementFactory.make("nvarguscamerasrc", "camera-source-2")
+    # source_2 = Gst.ElementFactory.make("nvarguscamerasrc", "camera-source-2")\
+    sources = [source_0, source_1]
 
-    # sources = [source_0, source_1, source_2]
-    sources = [source_0, source_1]    
-    _ = [exit_if_none(s) for s in sources]
-
-    # Create nvstreammux instance to form batches from one or more sources.
-    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
-    exit_if_none(streammux)
-
-    # Use nvinfer to run inferencing on decoder's output,
-    # behaviour of inferencing is set through config file
-    pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
-    exit_if_none(pgie)
-
-    # Use convertor to convert from NV12 to RGBA as required by nvosd
-    nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
-    exit_if_none(nvvidconv)
-    
-
-    # Create OSD to draw on the converted RGBA buffer
-    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
-    exit_if_none(nvosd)
-
-    # Finally render the osd output
-    if is_aarch64():
-        transform = Gst.ElementFactory.make("nvegltransform", "nvegl-transform")
-
-    print("Creating EGLSink \n")
-    # sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
-    sink = Gst.ElementFactory.make("fakesink", "fakesink")
-    exit_if_none(sink)
-
+    print("Configuring Sources...")
     for idx, source in enumerate(sources):
         source.set_property('sensor-id', idx)
         source.set_property('bufapi-version', 1)
 
+    print("Creating Pipeline Elements...")
+    streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
+    pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
+    nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
+    nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
+    transform = Gst.ElementFactory.make("nvegltransform", "nvegl-transform") # nvgltransform needed on aarch64
+    sink = Gst.ElementFactory.make("fakesink", "fakesink")
+
+    elements = [*sources, streammux, pgie, nvvidconv, nvosd, transform, sink]
+    
+    for el in elements:
+        # Make sure we successfuly created all elements
+        exit_if_none(el)
+
+    print("Configuring Pipeline Elements...")
     streammux.set_property('width', 1920)
     streammux.set_property('height', 1080)
     streammux.set_property('batch-size', 3)
     streammux.set_property('batched-push-timeout', 4000000)
     pgie.set_property('config-file-path', "dstest1_pgie_config.txt")
 
-    print("Adding elements to Pipeline \n")
-    for idx, source in enumerate(sources):
-        pipeline.add(source)
-    pipeline.add(streammux)
-    pipeline.add(pgie)
-    pipeline.add(nvvidconv)
-    pipeline.add(nvosd)
-    pipeline.add(sink)
-    if is_aarch64():
-        pipeline.add(transform)
 
-    # we link the elements together
-    # file-source -> h264-  -> nvh264-decoder ->
-    # nvinfer -> nvvidconv -> nvosd -> video-renderer
-    print("Linking elements in the Pipeline \n")
-    # source.link()
+    print("Adding elements to Pipeline...")
+    for el in elements:
+        pipeline.add(el)
 
-
+    print("Linking elements in the Pipeline...")
     srcpads = []
     for idx, source in enumerate(sources):
         srcpad = source.get_static_pad("src")
@@ -209,18 +173,9 @@ def main(args):
     pgie.link(nvvidconv)
     nvvidconv.link(nvosd)
     nvosd.link(sink)
+    nvosd.link(transform)
+    transform.link(sink)
 
-    if is_aarch64():
-        nvosd.link(transform)
-        transform.link(sink)
-    else:
-        nvosd.link(sink)
-
-    # create an event loop and feed gstreamer bus mesages to it
-    loop = GObject.MainLoop()
-    bus = pipeline.get_bus()
-    bus.add_signal_watch()
-    bus.connect ("message", bus_call, loop)
 
     # Lets add probe to get informed of the meta data generated, we add probe to
     # the sink pad of the osd element, since by that time, the buffer would have
@@ -229,16 +184,29 @@ def main(args):
     exit_if_none(osdsinkpad)
     osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, osd_sink_pad_buffer_probe, 0)
 
+    return pipeline
+
+
+if __name__ == '__main__':
+
+    print("Initializing Gstreamer...")
+    GObject.threads_init()
+    Gst.init(None)
+    
+    pipeline = create_pipeline()
+
+    # create an event loop and feed gstreamer bus mesages to it
+    loop = GObject.MainLoop()
+    bus = pipeline.get_bus()
+    bus.add_signal_watch()
+    bus.connect ("message", bus_call, loop)
+
     # start play back and listen to events
-    print("Starting pipeline \n")
+    print("Starting pipeline...")
     pipeline.set_state(Gst.State.PLAYING)
     try:
         loop.run()
-    except:
-        pass
-    # cleanup
-    pipeline.set_state(Gst.State.NULL)
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv))
-
+    except Exception as e:
+        print(e)
+    finally:
+        pipeline.set_state(Gst.State.NULL)
