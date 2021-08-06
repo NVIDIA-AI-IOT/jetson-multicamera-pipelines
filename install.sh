@@ -16,3 +16,8 @@ sudo make install
 cd /opt/nvidia/deepstream/deepstream/lib 
 sudo python3 setup.py install
 
+# copy models from deepstream samples (.egine files)
+cp -r /opt/nvidia/deepstream/deepstream-5.1/samples/models/ .
+
+sudo apt install cuda-nvrtc-10-2
+
