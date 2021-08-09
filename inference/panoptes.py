@@ -15,11 +15,18 @@ import pyds
 import logging  # TODO: print -> logging
 
 
-def exit_if_none(element):
+def _exit_if_none(element):
     if element is None:
         sys.stderr.write(f"Pipeline element is None!\n Exiting.")
         sys.exit(1)
         return False
+    else:
+        return True
+
+
+def _err_if_none(element):
+    if element is None:
+        raise ElementNotCreatedError
     else:
         return True
 
@@ -78,60 +85,43 @@ class MultiCamPipeline(Thread):
     def _create_pipeline(self):
 
         pipeline = Gst.Pipeline()
-        exit_if_none(pipeline)
+        _err_if_none(pipeline)
 
-        print("Creating Sources...")
-        source_0 = _make_element_safe("nvarguscamerasrc")
-        source_1 = Gst.ElementFactory.make("nvarguscamerasrc", "camera-source-1")
-        # source_2 = Gst.ElementFactory.make("nvarguscamerasrc", "camera-source-2")\
-        sources = [source_0, source_1]
+        # Create sources
+        n_cams = 2 + 1
+        sources = [_make_element_safe("nvarguscamerasrc") for _ in range(n_cams)]
 
-        print("Configuring Sources...")
+        # Configure sources
         for idx, source in enumerate(sources):
             source.set_property("sensor-id", idx)
             source.set_property("bufapi-version", 1)
 
-        print("Creating Pipeline Elements...")
-        streammux = Gst.ElementFactory.make("nvstreammux", "Stream-muxer")
-        pgie = Gst.ElementFactory.make("nvinfer", "primary-inference")
-        nvvidconv = Gst.ElementFactory.make("nvvideoconvert", "convertor")
-        nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
-        transform = Gst.ElementFactory.make(
-            "nvegltransform", "nvegl-transform"
-        )  # nvgltransform needed on aarch64
-        sink = Gst.ElementFactory.make("fakesink", "fakesink")
-
-        elements = [*sources, streammux, pgie, nvvidconv, nvosd, transform, sink]
-
-        for el in elements:
-            # Make sure we successfuly created all elements
-            exit_if_none(el)
-
-        print("Configuring Pipeline Elements...")
+        # Configure streammux
+        streammux = _make_element_safe("nvstreammux")
         streammux.set_property("width", 1920)
         streammux.set_property("height", 1080)
         streammux.set_property("batch-size", 3)
         streammux.set_property("batched-push-timeout", 4000000)
+
+        # Configure nvinfer
+        pgie = _make_element_safe("nvinfer")
         pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
 
-        print("Adding elements to Pipeline...")
+        # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
+        nvvidconv = _make_element_safe("nvvideoconvert")
+        nvosd = _make_element_safe("nvdsosd")
+        transform = _make_element_safe("nvegltransform")
+        sink = _make_element_safe("fakesink")
+
+        # Add everything to the pipeline
+        elements = [*sources, streammux, pgie, nvvidconv, nvosd, transform, sink]
         for el in elements:
             pipeline.add(el)
 
-        print("Linking elements in the Pipeline...")
-        srcpads = []
+        # Link elements
         for idx, source in enumerate(sources):
             srcpad = source.get_static_pad("src")
-            exit_if_none(srcpad)
-            srcpads.append(srcpad)
-
-        sinkpads = []
-        for idx, source in enumerate(sources):
             sinkpad = streammux.get_request_pad(f"sink_{idx}")
-            exit_if_none(sinkpad)
-            sinkpads.append(sinkpad)
-
-        for srcpad, sinkpad in zip(srcpads, sinkpads):
             srcpad.link(sinkpad)
 
         streammux.link(pgie)
@@ -141,114 +131,116 @@ class MultiCamPipeline(Thread):
         nvosd.link(transform)
         transform.link(sink)
 
-        # Lets add probe to get informed of the meta data generated, we add probe to
-        # the sink pad of the osd element, since by that time, the buffer would have
-        # had got all the metadata.
+        # Register callback on OSD sinkpad.
+        # This way we get access to object detection results
         osdsinkpad = nvosd.get_static_pad("sink")
-        exit_if_none(osdsinkpad)
-        osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, osd_sink_pad_buffer_probe, 0)
+
+        if osdsinkpad is None:
+            raise Error  # TODO: narrow down
+
+        osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._osd_callback, 0)
 
         return pipeline
+
+    def _osd_callback(self, pad, info, u_data):
+
+        print("OSD cb")
+        frame_number = 0
+        # Intiallizing object counter with 0.
+        obj_counter = {
+            PGIE_CLASS_ID_VEHICLE: 0,
+            PGIE_CLASS_ID_PERSON: 0,
+            PGIE_CLASS_ID_BICYCLE: 0,
+            PGIE_CLASS_ID_ROADSIGN: 0,
+        }
+        num_rects = 0
+
+        gst_buffer = info.get_buffer()
+        if not gst_buffer:
+            # TODO: logging.error
+            print("Unable to get GstBuffer ")
+            return
+
+        buff_ptr = hash(gst_buffer)  # Memory address of gst_buffer
+        batch_meta = pyds.gst_buffer_get_nvds_batch_meta(buff_ptr)
+
+        l_frame = batch_meta.frame_meta_list
+        while l_frame is not None:
+            try:
+                # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
+                # The casting is done by pyds.glist_get_nvds_frame_meta()
+                # The casting also keeps ownership of the underlying memory
+                # in the C code, so the Python garbage collector will leave
+                # it alone.
+                # frame_meta = pyds.glist_get_nvds_frame_meta(l_frame.data)
+                frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
+            except StopIteration:
+                break
+
+            frame_number = frame_meta.frame_num
+            num_rects = frame_meta.num_obj_meta
+            l_obj = frame_meta.obj_meta_list
+            while l_obj is not None:
+                try:
+                    # Casting l_obj.data to pyds.NvDsObjectMeta
+                    # obj_meta=pyds.glist_get_nvds_object_meta(l_obj.data)
+                    obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
+                except StopIteration:
+                    break
+                obj_counter[obj_meta.class_id] += 1
+                obj_meta.rect_params.border_color.set(0.0, 0.0, 1.0, 0.0)
+                try:
+                    l_obj = l_obj.next
+                except StopIteration:
+                    break
+
+            # Acquiring a display meta object. The memory ownership remains in
+            # the C code so downstream plugins can still access it. Otherwise
+            # the garbage collector will claim it when this probe function exits.
+            display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
+            display_meta.num_labels = 1
+            py_nvosd_text_params = display_meta.text_params[0]
+            # Setting display text to be shown on screen
+            # Note that the pyds module allocates a buffer for the string, and the
+            # memory will not be claimed by the garbage collector.
+            # Reading the display_text field here will return the C address of the
+            # allocated string. Use pyds.get_string() to get the string content.
+            py_nvosd_text_params.display_text = "Frame Number={} Number of Objects={} Vehicle_count={} Person_count={}".format(
+                frame_number,
+                num_rects,
+                obj_counter[PGIE_CLASS_ID_VEHICLE],
+                obj_counter[PGIE_CLASS_ID_PERSON],
+            )
+
+            # Now set the offsets where the string should appear
+            py_nvosd_text_params.x_offset = 10
+            py_nvosd_text_params.y_offset = 12
+
+            # Font , font-color and font-size
+            py_nvosd_text_params.font_params.font_name = "Serif"
+            py_nvosd_text_params.font_params.font_size = 10
+            # set(red, green, blue, alpha); set to White
+            py_nvosd_text_params.font_params.font_color.set(1.0, 1.0, 1.0, 1.0)
+
+            # Text background color
+            py_nvosd_text_params.set_bg_clr = 1
+            # set(red, green, blue, alpha); set to Black
+            py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
+            # Using pyds.get_string() to get display_text as string
+            print(pyds.get_string(py_nvosd_text_params.display_text))
+            pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
+            try:
+                l_frame = l_frame.next
+            except StopIteration:
+                break
+
+        return Gst.PadProbeReturn.OK
 
 
 PGIE_CLASS_ID_VEHICLE = 0
 PGIE_CLASS_ID_BICYCLE = 1
 PGIE_CLASS_ID_PERSON = 2
 PGIE_CLASS_ID_ROADSIGN = 3
-
-
-def osd_sink_pad_buffer_probe(pad, info, u_data):
-    print("OSD cb")
-    frame_number = 0
-    # Intiallizing object counter with 0.
-    obj_counter = {
-        PGIE_CLASS_ID_VEHICLE: 0,
-        PGIE_CLASS_ID_PERSON: 0,
-        PGIE_CLASS_ID_BICYCLE: 0,
-        PGIE_CLASS_ID_ROADSIGN: 0,
-    }
-    num_rects = 0
-
-    gst_buffer = info.get_buffer()
-    if not gst_buffer:
-        print("Unable to get GstBuffer ")
-        return
-
-    # Retrieve batch metadata from the gst_buffer
-    # Note that pyds.gst_buffer_get_nvds_batch_meta() expects the
-    # C address of gst_buffer as input, which is obtained with hash(gst_buffer)
-    batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
-    l_frame = batch_meta.frame_meta_list
-    while l_frame is not None:
-        try:
-            # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
-            # The casting is done by pyds.glist_get_nvds_frame_meta()
-            # The casting also keeps ownership of the underlying memory
-            # in the C code, so the Python garbage collector will leave
-            # it alone.
-            # frame_meta = pyds.glist_get_nvds_frame_meta(l_frame.data)
-            frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
-        except StopIteration:
-            break
-
-        frame_number = frame_meta.frame_num
-        num_rects = frame_meta.num_obj_meta
-        l_obj = frame_meta.obj_meta_list
-        while l_obj is not None:
-            try:
-                # Casting l_obj.data to pyds.NvDsObjectMeta
-                # obj_meta=pyds.glist_get_nvds_object_meta(l_obj.data)
-                obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
-            except StopIteration:
-                break
-            obj_counter[obj_meta.class_id] += 1
-            obj_meta.rect_params.border_color.set(0.0, 0.0, 1.0, 0.0)
-            try:
-                l_obj = l_obj.next
-            except StopIteration:
-                break
-
-        # Acquiring a display meta object. The memory ownership remains in
-        # the C code so downstream plugins can still access it. Otherwise
-        # the garbage collector will claim it when this probe function exits.
-        display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
-        display_meta.num_labels = 1
-        py_nvosd_text_params = display_meta.text_params[0]
-        # Setting display text to be shown on screen
-        # Note that the pyds module allocates a buffer for the string, and the
-        # memory will not be claimed by the garbage collector.
-        # Reading the display_text field here will return the C address of the
-        # allocated string. Use pyds.get_string() to get the string content.
-        py_nvosd_text_params.display_text = "Frame Number={} Number of Objects={} Vehicle_count={} Person_count={}".format(
-            frame_number,
-            num_rects,
-            obj_counter[PGIE_CLASS_ID_VEHICLE],
-            obj_counter[PGIE_CLASS_ID_PERSON],
-        )
-
-        # Now set the offsets where the string should appear
-        py_nvosd_text_params.x_offset = 10
-        py_nvosd_text_params.y_offset = 12
-
-        # Font , font-color and font-size
-        py_nvosd_text_params.font_params.font_name = "Serif"
-        py_nvosd_text_params.font_params.font_size = 10
-        # set(red, green, blue, alpha); set to White
-        py_nvosd_text_params.font_params.font_color.set(1.0, 1.0, 1.0, 1.0)
-
-        # Text background color
-        py_nvosd_text_params.set_bg_clr = 1
-        # set(red, green, blue, alpha); set to Black
-        py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
-        # Using pyds.get_string() to get display_text as string
-        print(pyds.get_string(py_nvosd_text_params.display_text))
-        pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
-        try:
-            l_frame = l_frame.next
-        except StopIteration:
-            break
-
-    return Gst.PadProbeReturn.OK
 
 
 if __name__ == "__main__":
