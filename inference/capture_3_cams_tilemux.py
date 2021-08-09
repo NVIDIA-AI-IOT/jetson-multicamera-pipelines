@@ -224,43 +224,6 @@ def decodebin_child_added(child_proxy, Object, name, user_data):
         Object.connect("child-added", decodebin_child_added, user_data)
 
 
-def create_source_bin(index, uri):
-    print("Creating source bin")
-
-    # Create a source GstBin to abstract this bin's content from the rest of the
-    # pipeline
-    bin_name = "source-bin-%02d" % index
-    print(bin_name)
-    nbin = Gst.Bin.new(bin_name)
-    if not nbin:
-        sys.stderr.write(" Unable to create source bin \n")
-
-    # Source element for reading from the uri.
-    # We will use decodebin and let it figure out the container format of the
-    # stream and the codec and plug the appropriate demux and decode plugins.
-    uri_decode_bin = Gst.ElementFactory.make("uridecodebin", "uri-decode-bin")
-    if not uri_decode_bin:
-        sys.stderr.write(" Unable to create uri decode bin \n")
-    # We set the input uri to the source element
-    uri_decode_bin.set_property("uri", uri)
-    # Connect to the "pad-added" signal of the decodebin which generates a
-    # callback once a new pad for raw data has beed created by the decodebin
-    uri_decode_bin.connect("pad-added", cb_newpad, nbin)
-    uri_decode_bin.connect("child-added", decodebin_child_added, nbin)
-
-    # We need to create a ghost pad for the source bin which will act as a proxy
-    # for the video decoder src pad. The ghost pad will not have a target right
-    # now. Once the decode bin creates the video decoder and generates the
-    # cb_newpad callback, we will set the ghost pad target to the video decoder
-    # src pad.
-    Gst.Bin.add(nbin, uri_decode_bin)
-    bin_pad = nbin.add_pad(Gst.GhostPad.new_no_target("src", Gst.PadDirection.SRC))
-    if not bin_pad:
-        sys.stderr.write(" Failed to add ghost pad in source bin \n")
-        return None
-    return nbin
-
-
 def main(args):
     # Check input arguments
     if len(args) < 2:
