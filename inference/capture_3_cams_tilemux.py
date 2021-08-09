@@ -152,7 +152,7 @@ def tiler_sink_pad_buffer_probe(pad, info, u_data):
         print("Frame Number=", frame_number, "Number of Objects=", num_rects, "Vehicle_count=",
               obj_counter[PGIE_CLASS_ID_VEHICLE], "Person_count=", obj_counter[PGIE_CLASS_ID_PERSON])
         # Get frame rate through this probe
-        fps_streams["stream{0}".format(frame_meta.pad_index)].get_fps()
+        fps_streams["stream{}".format(frame_meta.pad_index)].get_fps()
         if save_image:
             img_path = "{}/stream_{}/frame_{}.jpg".format(folder_name, frame_meta.pad_index, frame_number)
             cv2.imwrite(img_path, frame_copy)
@@ -225,20 +225,13 @@ def decodebin_child_added(child_proxy, Object, name, user_data):
 
 
 def main(args):
-    # Check input arguments
-    if len(args) < 2:
-        sys.stderr.write("usage: %s <uri1> [uri2] ... [uriN] <folder to save frames>\n" % args[0])
-        sys.exit(1)
+    number_sources = 4
 
-    for i in range(0, len(args) - 2):
+    for i in range(0, number_sources):
         fps_streams["stream{0}".format(i)] = GETFPS(i)
-    number_sources = len(args) - 2
 
     global folder_name
-    folder_name = args[-1]
-    if path.exists(folder_name):
-        sys.stderr.write("The output folder %s already exists. Please remove it first.\n" % folder_name)
-        sys.exit(1)
+    folder_name = 'output'
 
     os.mkdir(folder_name)
     print("Frames will be saved in ", folder_name)
@@ -317,20 +310,18 @@ def main(args):
     nvosd = Gst.ElementFactory.make("nvdsosd", "onscreendisplay")
     if not nvosd:
         sys.stderr.write(" Unable to create nvosd \n")
-    if (is_aarch64()):
-        print("Creating transform \n ")
-        transform = Gst.ElementFactory.make("nvegltransform", "nvegl-transform")
-        if not transform:
-            sys.stderr.write(" Unable to create transform \n")
+
+    print("Creating transform \n ")
+    transform = Gst.ElementFactory.make("nvegltransform", "nvegl-transform")
+    exit_if_none(transform)
+
+    print("Creating nvtee...")
+    nvtee = Gst.ElementFactory.make("tee", "nvtee-splitter")
+    exit_if_none(nvtee)
 
     print("Creating EGLSink \n")
     sink = Gst.ElementFactory.make("nveglglessink", "nvvideo-renderer")
-    if not sink:
-        sys.stderr.write(" Unable to create egl sink \n")
-
-    if is_live:
-        print("Atleast one of the sources is live")
-        streammux.set_property('live-source', 1)
+    exit_if_none(sink)
 
     streammux.set_property('width', 1920)
     streammux.set_property('height', 1080)
@@ -367,8 +358,8 @@ def main(args):
     pipeline.add(filter1)
     pipeline.add(nvvidconv1)
     pipeline.add(nvosd)
-    if is_aarch64():
-        pipeline.add(transform)
+    pipeline.add(nvtee)
+    pipeline.add(transform)
     pipeline.add(sink)
 
     print("Linking elements in the Pipeline \n")
@@ -378,11 +369,21 @@ def main(args):
     filter1.link(tiler)
     tiler.link(nvvidconv)
     nvvidconv.link(nvosd)
-    if is_aarch64():
-        nvosd.link(transform)
-        transform.link(sink)
-    else:
-        nvosd.link(sink)
+    nvosd.link(nvtee)
+
+    print("Linking nvtee -> transform -> videosink")
+    srcpad0 = nvtee.get_request_pad("src_0")
+    sinkpad_transform = transform.get_static_pad('sink')
+    exit_if_none(srcpad0)
+    exit_if_none(sinkpad_transform)
+
+    srcpad0.link(sinkpad_transform)
+    
+    transform.link(sink)
+
+    print("Linking nvtee -> encoder")
+    srcpad1 = nvtee.get_request_pad("src_1")
+    exit_if_none(srcpad1)
 
     # create an event loop and feed gstreamer bus mesages to it
     loop = GObject.MainLoop()
@@ -391,10 +392,8 @@ def main(args):
     bus.connect("message", bus_call, loop)
 
     tiler_sink_pad = tiler.get_static_pad("sink")
-    if not tiler_sink_pad:
-        sys.stderr.write(" Unable to get src pad \n")
-    else:
-        tiler_sink_pad.add_probe(Gst.PadProbeType.BUFFER, tiler_sink_pad_buffer_probe, 0)
+    exit_if_none(tiler_sink_pad)
+    tiler_sink_pad.add_probe(Gst.PadProbeType.BUFFER, tiler_sink_pad_buffer_probe, 0)
 
     # List the sources
     print("Now playing...")
