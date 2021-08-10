@@ -104,7 +104,8 @@ class MultiCamPipeline(Thread):
 
         # Configure nvinfer
         pgie = _make_element_safe("nvinfer")
-        pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
+        # pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
+        pgie.set_property("config-file-path", "config_infer_primary_peoplenet.txt")
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
         nvvidconv = _make_element_safe("nvvideoconvert")
