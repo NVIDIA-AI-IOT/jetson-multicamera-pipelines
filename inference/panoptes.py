@@ -1,19 +1,20 @@
 import sys
-
 from threading import Thread
 
 import gi
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GObject, Gst
-from common.is_aarch_64 import is_aarch64
-from common.bus_call import bus_call
-
-import pyds
-import cv2
-import time
-import numpy as np
 import logging  # TODO: print -> logging
+import time
+
+import cv2
+import numpy as np
+import pyds
+from gi.repository import GObject, Gst
+
+from common.bus_call import bus_call
+from common.is_aarch_64 import is_aarch64
+
 
 def _err_if_none(element):
     if element is None:
