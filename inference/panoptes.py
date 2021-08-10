@@ -16,15 +16,24 @@ from gi.repository import GObject, Gst
 from common.bus_call import bus_call
 from common.is_aarch_64 import is_aarch64
 
-
 def _err_if_none(element):
     if element is None:
-        raise ElementNotCreatedError
+        raise Exception("Element is none!")
     else:
         return True
 
+def _sanitize(element) -> Gst.Element:
+    """
+    Passthrough function which sure element is not `None`
+    Returns `Gst.Element` or raises Error
+    """
+    if element is None:
+        raise Exception("Element is none!")
+    else:
+        return element
 
-def _make_element_safe(el_type: str) -> Gst.Element:
+
+def _make_element_safe(el_type: str, el_name=None) -> Gst.Element:
     """
     Creates a gstremer element using el_type factory.
     Returns Gst.Element or throws an error if we fail.
@@ -32,12 +41,12 @@ def _make_element_safe(el_type: str) -> Gst.Element:
     """
 
     # name=None parameter asks Gstreamer to uniquely name the elements for us
-    el = Gst.ElementFactory.make(el_type, name=None)
+    el = Gst.ElementFactory.make(el_type, name=el_name)
 
     if el is not None:
         return el
     else:
-        print(f"Pipeline element is None!\n Exiting.")
+        print(f"Pipeline element is None!")
         # TODO: narrow down the error
         # TODO: use Gst.ElementFactory.find to generate a more informative error message
         raise Error(f"Could not create element {el_type}")
@@ -87,6 +96,8 @@ class MultiCamPipeline(Thread):
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
 
+        n_models = 2
+
         # Create sources
         sources = [_make_element_safe("nvarguscamerasrc") for _ in range(n_cams)]
 
@@ -95,41 +106,54 @@ class MultiCamPipeline(Thread):
             source.set_property("sensor-id", idx)
             source.set_property("bufapi-version", 1)
 
-        # Configure streammux
-        streammux = _make_element_safe("nvstreammux")
-        streammux.set_property("width", 1920)
-        streammux.set_property("height", 1080)
-        streammux.set_property("batch-size", 3)
-        streammux.set_property("batched-push-timeout", 4000000)
+        tees = [_make_element_safe("tee") for _ in range(n_cams)]
 
-        # Configure nvinfer
-        pgie = _make_element_safe("nvinfer")
-        # pgie.set_property("config-file-path", "dstest1_pgie_config.txt")
-        pgie.set_property("config-file-path", "config_infer_primary_peoplenet.txt")
+        # Create and configure streammuxers for each model
+        muxers = [_make_element_safe("nvstreammux") for _ in range(n_models)]
+        for mux in muxers:
+            mux.set_property("width", 1920)
+            mux.set_property("height", 1080)
+            mux.set_property("batch-size", 3)
+            mux.set_property("batched-push-timeout", 4000000)
+
+        # Configure nvinfers
+        nvinfers = [_make_element_safe("nvinfer") for _ in range(n_models)]
+        nvinfers[0].set_property("config-file-path", "config_infer_primary_peoplenet.txt")
+        nvinfers[1].set_property("config-file-path", "dstest1_pgie_config.txt")
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
         nvvidconv = _make_element_safe("nvvideoconvert")
         nvosd = _make_element_safe("nvdsosd")
         transform = _make_element_safe("nvegltransform")
-        sink = _make_element_safe("fakesink")
+        sink0 = _make_element_safe("fakesink")
+        sink1 = _make_element_safe("fakesink")
 
         # Add everything to the pipeline
-        elements = [*sources, streammux, pgie, nvvidconv, nvosd, transform, sink]
+        elements = [*sources, *tees, *muxers, *nvinfers, nvvidconv, nvosd, transform, sink0, sink1]
         for el in elements:
             pipeline.add(el)
 
         # Link elements
-        for idx, source in enumerate(sources):
-            srcpad = source.get_static_pad("src")
-            sinkpad = streammux.get_request_pad(f"sink_{idx}")
-            srcpad.link(sinkpad)
+        for s, t in zip(sources, tees):
+            s.link(t)
 
-        streammux.link(pgie)
-        pgie.link(nvvidconv)
-        nvvidconv.link(nvosd)
-        nvosd.link(sink)
-        nvosd.link(transform)
-        transform.link(sink)
+        # Link tees to muxers
+        for idx, tee in enumerate(tees):
+            for jdx, mux in enumerate(muxers):
+                srcpad = _sanitize(tee.get_request_pad(f"src_{jdx}"))
+                sinkpad = _sanitize(mux.get_request_pad(f"sink_{idx}"))
+                srcpad.link(sinkpad)
+        
+        # Link muxers to inference
+        for mux, infer in zip(muxers, nvinfers):
+            mux.link(infer)
+            
+        nvinfers[0].link(sink0)
+        # nvvidconv.link(nvosd)
+        # nvosd.link(transform)
+        # transform.link(sink0)
+
+        nvinfers[1].link(sink1)
 
         # Register callback on OSD sinkpad.
         # This way we get access to object detection results
