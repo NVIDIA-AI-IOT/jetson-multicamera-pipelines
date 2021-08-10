@@ -118,8 +118,8 @@ class MultiCamPipeline(Thread):
 
         # Configure nvinfers
         nvinfers = [_make_element_safe("nvinfer") for _ in range(n_models)]
-        nvinfers[0].set_property("config-file-path", "config_infer_primary_peoplenet.txt")
-        nvinfers[1].set_property("config-file-path", "dstest1_pgie_config.txt")
+        nvinfers[0].set_property("config-file-path", "models/peoplenet.txt")
+        nvinfers[1].set_property("config-file-path", "models/resnet10_4class_detector.txt")
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
         nvvidconv = _make_element_safe("nvvideoconvert")
