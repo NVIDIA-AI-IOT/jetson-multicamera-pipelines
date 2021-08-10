@@ -4,6 +4,7 @@ import time
 from threading import Thread
 
 import cv2
+
 # Gstreamer imports
 import gi
 import numpy as np
@@ -140,6 +141,10 @@ class MultiCamPipeline(Thread):
 
         return pipeline
 
+    def running(self):
+        _, state, _ = self._p.get_state(1)
+        return True if state == Gst.State.PLAYING else False
+
     def _osd_callback(self, pad, info, u_data):
 
         self._frame_n = 0
@@ -265,6 +270,9 @@ if __name__ == "__main__":
 
     pipeline = MultiCamPipeline(n_cams=3)
     pipeline.start()
+
+    while not pipeline.running():
+        time.sleep(1)
 
     try:
         while True:
