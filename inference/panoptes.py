@@ -43,7 +43,7 @@ def _make_element_safe(el_type: str) -> Gst.Element:
 
 
 class MultiCamPipeline(Thread):
-    def __init__(self, n_cams=3, *args, **kwargs):
+    def __init__(self, n_cams, *args, **kwargs):
 
         super().__init__()
 
@@ -54,7 +54,8 @@ class MultiCamPipeline(Thread):
         self._mainloop = GObject.MainLoop()
 
         # gst pipeline object
-        self._p = self._create_pipeline()
+        self._ncams = n_cams
+        self._p = self._create_pipeline(n_cams)
 
         self._bus = self._p.get_bus()
         self._bus.add_signal_watch()
@@ -80,13 +81,12 @@ class MultiCamPipeline(Thread):
         finally:
             self._p.set_state(Gst.State.NULL)
 
-    def _create_pipeline(self):
+    def _create_pipeline(self, n_cams):
 
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
 
         # Create sources
-        n_cams = 2 + 1
         sources = [_make_element_safe("nvarguscamerasrc") for _ in range(n_cams)]
 
         # Configure sources
@@ -263,7 +263,7 @@ class GListIterator:
 
 if __name__ == "__main__":
 
-    pipeline = MultiCamPipeline()
+    pipeline = MultiCamPipeline(n_cams=3)
     pipeline.start()
 
     try:
