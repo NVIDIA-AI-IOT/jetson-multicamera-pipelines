@@ -12,6 +12,9 @@ from common.is_aarch_64 import is_aarch64
 from common.bus_call import bus_call
 
 import pyds
+import cv2
+import time
+import numpy as np
 import logging  # TODO: print -> logging
 
 
@@ -51,7 +54,7 @@ def _make_element_safe(el_type: str) -> Gst.Element:
 
 
 class MultiCamPipeline(Thread):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, n_cams=3, *args, **kwargs):
 
         super().__init__()
 
@@ -69,6 +72,12 @@ class MultiCamPipeline(Thread):
         self._bus.connect("message", bus_call, self._mainloop)
 
         self._pipeline = self._p
+
+        # Runtime parameters
+        N_CLASSES = 4
+        self.images = [np.zeros((10, 10)) for _ in range(0, n_cams)]
+        self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, n_cams)]
+        self.frame_n = [0 for _ in range(0, n_cams)]
 
     def run(self):
         # start play back and listen to events
@@ -144,72 +153,66 @@ class MultiCamPipeline(Thread):
 
     def _osd_callback(self, pad, info, u_data):
 
-        print("OSD cb")
-        frame_number = 0
+        self._frame_n = 0
         # Intiallizing object counter with 0.
-        obj_counter = {
+        self._detections = {
             PGIE_CLASS_ID_VEHICLE: 0,
             PGIE_CLASS_ID_PERSON: 0,
             PGIE_CLASS_ID_BICYCLE: 0,
             PGIE_CLASS_ID_ROADSIGN: 0,
         }
+
         num_rects = 0
 
         gst_buffer = info.get_buffer()
         if not gst_buffer:
             # TODO: logging.error
             print("Unable to get GstBuffer ")
-            return
+            return Gst.PadProbeReturn.DROP
 
         buff_ptr = hash(gst_buffer)  # Memory address of gst_buffer
         batch_meta = pyds.gst_buffer_get_nvds_batch_meta(buff_ptr)
 
+        # Iterate frames in a batch
         l_frame = batch_meta.frame_meta_list
         while l_frame is not None:
             try:
-                # Note that l_frame.data needs a cast to pyds.NvDsFrameMeta
-                # The casting is done by pyds.glist_get_nvds_frame_meta()
-                # The casting also keeps ownership of the underlying memory
-                # in the C code, so the Python garbage collector will leave
-                # it alone.
-                # frame_meta = pyds.glist_get_nvds_frame_meta(l_frame.data)
                 frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
+                cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
+                img = pyds.get_nvds_buf_surface(hash(gst_buffer), cam_id)
+
+                # Store images
+                self.images[cam_id] = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+                self.frame_n[cam_id] = frame_meta.frame_num
+
             except StopIteration:
                 break
 
-            frame_number = frame_meta.frame_num
-            num_rects = frame_meta.num_obj_meta
+            # Iterate objects in a frame
             l_obj = frame_meta.obj_meta_list
             while l_obj is not None:
                 try:
-                    # Casting l_obj.data to pyds.NvDsObjectMeta
-                    # obj_meta=pyds.glist_get_nvds_object_meta(l_obj.data)
                     obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
                 except StopIteration:
                     break
-                obj_counter[obj_meta.class_id] += 1
+
+                self.detections[cam_id][obj_meta.class_id] += 1
                 obj_meta.rect_params.border_color.set(0.0, 0.0, 1.0, 0.0)
+
                 try:
                     l_obj = l_obj.next
                 except StopIteration:
                     break
 
-            # Acquiring a display meta object. The memory ownership remains in
-            # the C code so downstream plugins can still access it. Otherwise
-            # the garbage collector will claim it when this probe function exits.
             display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
             display_meta.num_labels = 1
             py_nvosd_text_params = display_meta.text_params[0]
-            # Setting display text to be shown on screen
-            # Note that the pyds module allocates a buffer for the string, and the
-            # memory will not be claimed by the garbage collector.
-            # Reading the display_text field here will return the C address of the
-            # allocated string. Use pyds.get_string() to get the string content.
+
             py_nvosd_text_params.display_text = "Frame Number={} Number of Objects={} Vehicle_count={} Person_count={}".format(
-                frame_number,
+                self._frame_n,
                 num_rects,
-                obj_counter[PGIE_CLASS_ID_VEHICLE],
-                obj_counter[PGIE_CLASS_ID_PERSON],
+                self._detections[PGIE_CLASS_ID_VEHICLE],
+                self._detections[PGIE_CLASS_ID_PERSON],
             )
 
             # Now set the offsets where the string should appear
@@ -227,7 +230,7 @@ class MultiCamPipeline(Thread):
             # set(red, green, blue, alpha); set to Black
             py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
             # Using pyds.get_string() to get display_text as string
-            print(pyds.get_string(py_nvosd_text_params.display_text))
+            # print(pyds.get_string(py_nvosd_text_params.display_text))
             pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
             try:
                 l_frame = l_frame.next
@@ -242,31 +245,42 @@ PGIE_CLASS_ID_BICYCLE = 1
 PGIE_CLASS_ID_PERSON = 2
 PGIE_CLASS_ID_ROADSIGN = 3
 
+
 class GListIterator:
     """
     Implements python iterator protocol for pyds.GList type
     This is not perfect, but concise than the altenative of manually iterating the list using l_obj.next
     https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/blob/6aabcaf85a9e8f11e9a4c39ab1cd46554de7c578/apps/deepstream-imagedata-multistream/deepstream_imagedata-multistream.py#L112
     """
-    def __init__ (self, pyds_glist):
+
+    def __init__(self, pyds_glist):
         self._head = pyds_glist
         self._curr = pyds_glist
 
-    def __iter__ (self):
+    def __iter__(self):
         self._curr = self._head
         return self
 
-    def __next__ (self):
+    def __next__(self):
         # Advance the _curr node of linked list
         self._curr = self._curr.next
 
         if self._curr is None:
             # TODO: can we take care of the type cast here?
-            raise StopIteration('Glist object reached termination node')
+            raise StopIteration("Glist object reached termination node")
         else:
             return self._curr
 
+
 if __name__ == "__main__":
 
-    hermes = MultiCamPipeline()
-    hermes.start()
+    pipeline = MultiCamPipeline()
+    pipeline.start()
+
+    try:
+        while True:
+            print(pipeline.images[0])
+            print(pipeline.detections[0])
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Exiting...")
