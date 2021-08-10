@@ -11,7 +11,7 @@ bash install.sh
 ## Quickstart
 
 ```python
-from panoptes import MultiCamPipeline
+from jetmulticam import MultiCamPipeline
 import vehicle
 
 pipeline = MultiCamPipeline(
