@@ -1,15 +1,15 @@
+import logging  # TODO: print -> logging
 import sys
+import time
 from threading import Thread
 
-import gi
-
-gi.require_version("Gst", "1.0")
-import logging  # TODO: print -> logging
-import time
-
 import cv2
+# Gstreamer imports
+import gi
 import numpy as np
 import pyds
+
+gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
 from common.bus_call import bus_call
