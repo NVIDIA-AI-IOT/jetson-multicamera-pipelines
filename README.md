@@ -31,6 +31,6 @@ pipeline.cameras[0].face_dets
 
 ## TODOs:
 
-- [] Add the diagram of the underlying gstreamer pipeline
-- [] Pano stitcher demo
-- [] Inspection robot demo
+- [ ] Add the diagram of the underlying gstreamer pipeline
+- [ ] Pano stitcher demo
+- [ ] Inspection robot demo
