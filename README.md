@@ -20,6 +20,7 @@ pipeline = MultiCamPipeline(
     detect_faces=True,
     save_images=True,  # much better than cv2.imsave
     save_h264=True,
+    publish_rtsp=True,
     copy=True,  # returns views (more memory efficient, but readonly) or copies (convenient, ok to r/w).
 )
 
@@ -31,4 +32,5 @@ pipeline.cameras[0].face_dets
 ## TODOs:
 
 - [] Add the diagram of the underlying gstreamer pipeline
-- 
+- [] Pano stitcher demo
+- [] Inspection robot demo
