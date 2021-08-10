@@ -17,16 +17,6 @@ import time
 import numpy as np
 import logging  # TODO: print -> logging
 
-
-def _exit_if_none(element):
-    if element is None:
-        sys.stderr.write(f"Pipeline element is None!\n Exiting.")
-        sys.exit(1)
-        return False
-    else:
-        return True
-
-
 def _err_if_none(element):
     if element is None:
         raise ElementNotCreatedError
@@ -50,7 +40,7 @@ def _make_element_safe(el_type: str) -> Gst.Element:
         print(f"Pipeline element is None!\n Exiting.")
         # TODO: narrow down the error
         # TODO: use Gst.ElementFactory.find to generate a more informative error message
-        raise Error
+        raise Error(f"Could not create element {el_type}")
 
 
 class MultiCamPipeline(Thread):
