@@ -1,13 +1,34 @@
 # Multi Camera Robot
 
-## Install
+An easy-to-use library for handling multiple cameras on Nvidia Jetson.
 
-## Setup
-
-```shell
-# For the code examples that require display.
-export DISPLAY=:0
-export OPENBLAS_CORETYPE=ARMV8 # Read more: https://github.com/numpy/numpy/issues/18131
+## Installation
+```
+git clone 
+bash install.sh
 ```
 
+## Quickstart
 
+```python
+from panoptes import MultiCamPipeline
+import vehicle
+
+pipeline = MultiCamPipeline(
+    n_cams=3,  # dynamically create pipeline for n cameras 1..6
+    detect_objects=True,  # choose the components we need a la carte / one-by-one
+    detect_faces=True,
+    save_images=True,  # much better than cv2.imsave
+    save_h264=True,
+    copy=True,  # returns views (more memory efficient, but readonly) or copies (convenient, ok to r/w).
+)
+
+pipeline.cameras[0].image  # (1080, 1920, 3) np array already mapped to host
+pipeline.cameras[0].obj_dets
+pipeline.cameras[0].face_dets
+```
+
+## TODOs:
+
+- [] Add the diagram of the underlying gstreamer pipeline
+- 
