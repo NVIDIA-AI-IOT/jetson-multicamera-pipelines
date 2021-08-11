@@ -16,8 +16,12 @@ sudo make install
 cd /opt/nvidia/deepstream/deepstream/lib 
 sudo python3 setup.py install
 
-# copy models from deepstream samples (.egine files)
-cp -r /opt/nvidia/deepstream/deepstream-5.1/samples/models/ .
-
 sudo apt install cuda-nvrtc-10-2
 
+# Give us read permissions to the mdoel
+sudo chmod -R +r /opt/nvidia/deepstream/deepstream-5.1/samples/models
+
+# Make sure there are models in /opt/nvidia/deepstream/deepstream-5.1/samples/models/
+stat /opt/nvidia/deepstream/deepstream-5.1/samples/models/Primary_Detector/resnet10.caffemodel
+
+echo $? # should return 0
