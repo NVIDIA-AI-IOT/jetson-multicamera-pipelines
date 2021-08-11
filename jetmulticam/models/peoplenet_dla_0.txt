@@ -1,11 +1,12 @@
 
 [property]
-gpu-id=0
+enable-dla=1
+use-dla-core=0
 net-scale-factor=0.0039215697906911373
 tlt-model-key=tlt_encode
 tlt-encoded-model=tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt
 labelfile-path=tlt_peoplenet_pruned_v2.0/labels.txt
-model-engine-file=tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt_b1_gpu0_fp16.engine
+# model-engine-file=tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt_b1_gpu0_fp16.engine
 input-dims=3;544;960;0
 uff-input-blob-name=input_1
 batch-size=3
