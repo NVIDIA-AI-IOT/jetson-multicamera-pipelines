@@ -31,7 +31,7 @@ detections = pipeline.cameras[0].obj_dets
 pipeline.cameras[0].face_dets
 ```
 
-## Runing custom application
+## Runing custom application on top of the pipeline
 ```python
 from navigation import NavDNN
 net = NavDNN()
