@@ -16,11 +16,13 @@ from gi.repository import GObject, Gst
 from common.bus_call import bus_call
 from common.is_aarch_64 import is_aarch64
 
+
 def _err_if_none(element):
     if element is None:
         raise Exception("Element is none!")
     else:
         return True
+
 
 def _sanitize(element) -> Gst.Element:
     """
@@ -98,28 +100,25 @@ class MultiCamPipeline(Thread):
 
         n_models = 2
 
-        # Create sources
+        # Create and configure sources
         sources = [_make_element_safe("nvarguscamerasrc") for _ in range(n_cams)]
-
-        # Configure sources
         for idx, source in enumerate(sources):
             source.set_property("sensor-id", idx)
             source.set_property("bufapi-version", 1)
 
-        tees = [_make_element_safe("tee") for _ in range(n_cams)]
+        # Create muxer
+        mux = _make_element_safe("nvstreammux")
+        mux.set_property("width", 1920)
+        mux.set_property("height", 1080)
+        mux.set_property("batch-size", 3)
+        mux.set_property("batched-push-timeout", 4000000)
 
-        # Create and configure streammuxers for each model
-        muxers = [_make_element_safe("nvstreammux") for _ in range(n_models)]
-        for mux in muxers:
-            mux.set_property("width", 1920)
-            mux.set_property("height", 1080)
-            mux.set_property("batch-size", 3)
-            mux.set_property("batched-push-timeout", 4000000)
+        models = ["models/peoplenet.txt", "models/resnet10_4class_detector.txt"]
 
-        # Configure nvinfers
-        nvinfers = [_make_element_safe("nvinfer") for _ in range(n_models)]
-        nvinfers[0].set_property("config-file-path", "models/peoplenet.txt")
-        nvinfers[1].set_property("config-file-path", "models/resnet10_4class_detector.txt")
+        # Create nvinfers
+        nvinfers = [_make_element_safe("nvinfer") for _ in range(len(models))]
+        for m_path, nvinf in zip(models, nvinfers):
+            nvinf.set_property("config-file-path", m_path)
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
         nvvidconv = _make_element_safe("nvvideoconvert")
@@ -129,31 +128,36 @@ class MultiCamPipeline(Thread):
         sink1 = _make_element_safe("fakesink")
 
         # Add everything to the pipeline
-        elements = [*sources, *tees, *muxers, *nvinfers, nvvidconv, nvosd, transform, sink0, sink1]
+        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, transform, sink0, sink1]
         for el in elements:
             pipeline.add(el)
 
         # Link elements
-        for s, t in zip(sources, tees):
-            s.link(t)
+        # for s, t in zip(sources, tees):
+        #     s.link(t)
 
         # Link tees to muxers
-        for idx, tee in enumerate(tees):
-            for jdx, mux in enumerate(muxers):
-                srcpad = _sanitize(tee.get_request_pad(f"src_{jdx}"))
-                sinkpad = _sanitize(mux.get_request_pad(f"sink_{idx}"))
-                srcpad.link(sinkpad)
-        
-        # Link muxers to inference
-        for mux, infer in zip(muxers, nvinfers):
-            mux.link(infer)
-            
-        nvinfers[0].link(sink0)
+        # for idx, tee in enumerate(tees):
+        #     for jdx, mux in enumerate(muxers):
+        #         srcpad = _sanitize(tee.get_request_pad(f"src_{jdx}"))
+        #         sinkpad = _sanitize(mux.get_request_pad(f"sink_{idx}"))
+        #         srcpad.link(sinkpad)
+
+        for idx, source in enumerate(sources):
+            srcpad_or_none = source.get_static_pad(f"src")
+            sinkpad_or_none = mux.get_request_pad(f"sink_{idx}")
+            srcpad = _sanitize(srcpad_or_none)
+            sinkpad = _sanitize(sinkpad_or_none)
+            srcpad.link(sinkpad)
+
+        # TODO: generalize
+        mux.link(nvinfers[0])
+        nvinfers[0].link(nvinfers[1])
+        nvinfers[1].link(sink0)
+
         # nvvidconv.link(nvosd)
         # nvosd.link(transform)
         # transform.link(sink0)
-
-        nvinfers[1].link(sink1)
 
         # Register callback on OSD sinkpad.
         # This way we get access to object detection results
