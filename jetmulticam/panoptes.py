@@ -98,8 +98,6 @@ class MultiCamPipeline(Thread):
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
 
-        n_models = 2
-
         # Create and configure sources
         sources = [_make_element_safe("nvarguscamerasrc") for _ in range(n_cams)]
         for idx, source in enumerate(sources):
@@ -108,12 +106,15 @@ class MultiCamPipeline(Thread):
 
         # Create muxer
         mux = _make_element_safe("nvstreammux")
+        mux.set_property("live-source", 1)
         mux.set_property("width", 1920)
         mux.set_property("height", 1080)
         mux.set_property("batch-size", 3)
         mux.set_property("batched-push-timeout", 4000000)
 
-        models = ["models/peoplenet.txt", "models/resnet10_4class_detector.txt"]
+        # models = ["models/peoplenet_dla_0.txt", "models/peoplenet_dla_1.txt"]
+        # models = ["models/peoplenet_dla_0.txt"]
+        models = ["models/peoplenet.txt"]
 
         # Create nvinfers
         nvinfers = [_make_element_safe("nvinfer") for _ in range(len(models))]
@@ -123,12 +124,34 @@ class MultiCamPipeline(Thread):
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
         nvvidconv = _make_element_safe("nvvideoconvert")
         nvosd = _make_element_safe("nvdsosd")
+
+        tiler = _make_element_safe("nvmultistreamtiler")
+        tiler.set_property("rows", 2)
+        tiler.set_property("columns", 2)
+        tiler.set_property("width", 2)
+        tiler.set_property("height", 2)
+
+        # Render with EGL GLE sink
         transform = _make_element_safe("nvegltransform")
-        sink0 = _make_element_safe("fakesink")
-        sink1 = _make_element_safe("fakesink")
+        renderer = _make_element_safe("nveglglessink")
+
+        queue = _make_element_safe("queue")
+        overlaysink = _make_element_safe("nvoverlaysink")
+        overlaysink.set_property("sync", 0)  # crucial for performance of the pipeline
 
         # Add everything to the pipeline
-        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, transform, sink0, sink1]
+        # elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, transform, renderer]
+        elements = [
+            *sources,
+            mux,
+            *nvinfers,
+            nvvidconv,
+            nvosd,
+            tiler,
+            queue,
+            overlaysink,
+        ]
+
         for el in elements:
             pipeline.add(el)
 
@@ -150,14 +173,20 @@ class MultiCamPipeline(Thread):
             sinkpad = _sanitize(sinkpad_or_none)
             srcpad.link(sinkpad)
 
-        # TODO: generalize
         mux.link(nvinfers[0])
-        nvinfers[0].link(nvinfers[1])
-        nvinfers[1].link(sink0)
 
-        # nvvidconv.link(nvosd)
-        # nvosd.link(transform)
-        # transform.link(sink0)
+        for i in range(1, len(nvinfers)):
+            nvinfers[i - 1].link(nvinfers[i])
+        nvinfers[-1].link(nvvidconv)
+
+        nvvidconv.link(nvosd)
+        nvosd.link(tiler)
+
+        tiler.link(queue)
+        queue.link(overlaysink)
+
+        # tiler.link(transform)
+        # transform.link(renderer)
 
         # Register callback on OSD sinkpad.
         # This way we get access to object detection results
@@ -175,6 +204,7 @@ class MultiCamPipeline(Thread):
         return True if state == Gst.State.PLAYING else False
 
     def _osd_callback(self, pad, info, u_data):
+        start = time.perf_counter()
 
         self._frame_n = 0
         # Intiallizing object counter with 0.
@@ -260,6 +290,7 @@ class MultiCamPipeline(Thread):
             except StopIteration:
                 break
 
+        print(f"Callback took {1000 * (time.perf_counter() - start)} ms")
         return Gst.PadProbeReturn.OK
 
 
@@ -305,7 +336,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            print(pipeline.images[0])
+            print(pipeline.images[0].shape)
             print(pipeline.detections[0])
             time.sleep(1)
     except KeyboardInterrupt:
