@@ -25,3 +25,8 @@ sudo chmod -R +r /opt/nvidia/deepstream/deepstream-5.1/samples/models
 stat /opt/nvidia/deepstream/deepstream-5.1/samples/models/Primary_Detector/resnet10.caffemodel
 
 echo $? # should return 0
+
+# Get peoplenet model
+cd models/
+wget --content-disposition https://api.ngc.nvidia.com/v2/models/nvidia/tlt_peoplenet/versions/pruned_v2.0/zip -O tlt_peoplenet_pruned_v2.0.zip
+unzip tlt_peoplenet_pruned_v2.0.zip -d tlt_peoplenet_pruned_v2.0
