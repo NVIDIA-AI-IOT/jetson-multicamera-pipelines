@@ -31,6 +31,8 @@ pipeline.cameras[0].face_dets
 
 ## TODOs:
 
+- [x] Add programatic support for multiple sources
+- [x] Add programatic support for multiple models
 - [ ] Add the diagram of the underlying gstreamer pipeline
 - [ ] Pano stitcher demo
 - [ ] Inspection robot demo
