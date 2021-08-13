@@ -4,7 +4,8 @@ An easy-to-use library for handling multiple cameras on Nvidia Jetson.
 
 ## Installation
 ```
-git clone 
+git clone ssh://git@gitlab-master.nvidia.com:12051/tlewicki/multicamera-robot.git
+cd multicamera-robot
 bash install.sh
 ```
 
