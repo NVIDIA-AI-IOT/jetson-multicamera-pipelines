@@ -37,3 +37,29 @@ def _make_element_safe(el_type: str, el_name=None) -> Gst.Element:
         # TODO: narrow down the error
         # TODO: use Gst.ElementFactory.find to generate a more informative error message
         raise Error(f"Could not create element {el_type}")
+
+
+class GListIterator:
+    """
+    Implements python iterator protocol for pyds.GList type
+    This is not perfect, but concise than the altenative of manually iterating the list using l_obj.next
+    https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/blob/6aabcaf85a9e8f11e9a4c39ab1cd46554de7c578/apps/deepstream-imagedata-multistream/deepstream_imagedata-multistream.py#L112
+    """
+
+    def __init__(self, pyds_glist):
+        self._head = pyds_glist
+        self._curr = pyds_glist
+
+    def __iter__(self):
+        self._curr = self._head
+        return self
+
+    def __next__(self):
+        # Advance the _curr node of linked list
+        self._curr = self._curr.next
+
+        if self._curr is None:
+            # TODO: can we take care of the type cast here?
+            raise StopIteration("Glist object reached termination node")
+        else:
+            return self._curr
