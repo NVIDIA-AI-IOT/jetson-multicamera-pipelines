@@ -1,4 +1,4 @@
 # Expose API for the pipeline 
 
-from .panoptes import MultiCamPipeline
+from .pipeline_buidler import MultiCamPipeline
 from .models import models
