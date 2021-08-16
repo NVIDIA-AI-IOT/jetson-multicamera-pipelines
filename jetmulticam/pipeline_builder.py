@@ -12,13 +12,19 @@ import pyds
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
+from .common.bus_call import bus_call
 
-from common.bus_call import bus_call
-from common.is_aarch_64 import is_aarch64
+from .gstutils import _err_if_none, _make_element_safe, _sanitize
 
 
 class MultiCamPipeline(Thread):
-    def __init__(self, n_cams, *args, **kwargs):
+    def __init__(self, n_cams, models=None, *args, **kwargs):
+        """
+        models parameter can be:
+        - `dict`: mapping of models->sensor-ids to infer on
+        - `list`: list of models to use on frames from all cameras
+        - `None`: don't perform inference
+        """
 
         super().__init__()
 
