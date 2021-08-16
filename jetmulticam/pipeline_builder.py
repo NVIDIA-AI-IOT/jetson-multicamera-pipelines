@@ -36,7 +36,10 @@ class MultiCamPipeline(Thread):
 
         # gst pipeline object
         self._ncams = n_cams
-        self._p = self._create_pipeline(n_cams)
+        if type(models) == list:
+            self._p = self._create_pipeline(n_cams, models)
+        elif type(models) == dict:
+            raise NotImplementedError
 
         self._bus = self._p.get_bus()
         self._bus.add_signal_watch()
@@ -62,7 +65,7 @@ class MultiCamPipeline(Thread):
         finally:
             self._p.set_state(Gst.State.NULL)
 
-    def _create_pipeline(self, n_cams):
+    def _create_pipeline(self, n_cams, model_list):
 
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
@@ -81,13 +84,10 @@ class MultiCamPipeline(Thread):
         mux.set_property("batch-size", 3)
         mux.set_property("batched-push-timeout", 4000000)
 
-        # models = ["models/peoplenet_dla_0.txt", "models/peoplenet_dla_1.txt"]
-        # models = ["models/peoplenet_dla_0.txt"]
-        models = ["models/peoplenet.txt"]
-
         # Create nvinfers
-        nvinfers = [_make_element_safe("nvinfer") for _ in range(len(models))]
-        for m_path, nvinf in zip(models, nvinfers):
+        nvinfers = [_make_element_safe("nvinfer") for _ in range(len(model_list))]
+        for m_path, nvinf in zip(model_list, nvinfers):
+            print(f"Kurwa: {m_path}")
             nvinf.set_property("config-file-path", m_path)
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
