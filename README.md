@@ -9,6 +9,7 @@ Install
 git clone ssh://git@gitlab-master.nvidia.com:12051/tlewicki/multicamera-robot.git
 cd multicamera-robot
 bash install.sh
+source exports.sh
 ```
 
 Run demo
@@ -56,7 +57,7 @@ pipeline.cameras[0].face_dets
 ```python
 pipeline = MultiCamPipeline(
     # n_cams=3, 
-    cam_ids = [2, 3, 4, 5] # (Let's assume cameras 0, 1, 2 are used for something else)
+    cam_ids = [4, 5, 6] # Cameras 0-3 are stereo pairs and are used for something else
     models=[models.PeopleNet.DLA0, models.DashCamNet.DLA1]
     # ...
 )
@@ -77,13 +78,16 @@ pipeline = MultiCamPipeline(
 
 ## Examples showing custom application on top of jetmulticam
 
-Build your application on top of `jetmulticam`
-- [examples/00-example-panorama.ipynb](examples/00-example-panorama.ipynb)
-- [examples/01-example-pytorch.ipynb](examples/01-example-pytorch.ipynb)
-- [examples/02-example-navigation.ipynb](examples/02-example-navigation.ipynb))
-- ?
+How to build your own application using `jetmulticam`
+
+- [examples/00-example-hello-multicam-panorama.ipynb](examples/00-example-hello-multicam-panorama.ipynb)
+- [examples/01-example-pytorch-integration-todo.ipynb](examples/01-example-pytorch-integration-todo.ipynb)
+- [examples/02-example-pytorch-navigation-todo.ipynb](examples/02-example-pytorch-navigation-todo.ipynb)
+- [examples/03-example-inspection-robot-idea.py](examples/03-example-inspection-robot-idea.py)
+- [examples/04-example-retail-robot-idea.py](examples/04-example-retail-robot-idea.py)
 
 ## More
+
 Ready pipelines for specific multicamera usecase deployable via `gst-launch-1.0` are available at: [ready_pipelines](ready_pipelines)
 
 ## TODOs:
@@ -92,5 +96,5 @@ Ready pipelines for specific multicamera usecase deployable via `gst-launch-1.0`
 - [x] Add programatic support for multiple models
 - [ ] Add the diagram of the underlying gstreamer pipeline
 - [x] Pano stitcher demo
-- [ ] Inspection robot demo
+- [ ] Robot demo in Endeavor
 - [ ] `install.sh` -> `setup.py` for easier pip3 install
