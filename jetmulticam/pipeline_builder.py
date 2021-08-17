@@ -18,7 +18,7 @@ from .gstutils import _err_if_none, _make_element_safe, _sanitize
 
 
 class MultiCamPipeline(Thread):
-    def __init__(self, n_cams, models, *args, **kwargs):
+    def __init__(self, sensor_id_list, models, *args, **kwargs):
         """
         models parameter can be:
         - `dict`: mapping of models->sensor-ids to infer on
@@ -34,11 +34,10 @@ class MultiCamPipeline(Thread):
         self._mainloop = GObject.MainLoop()
 
         # gst pipeline object
-        self._ncams = n_cams
         if type(models) == list:
-            self._p = self._create_pipeline(n_cams, models)
+            self._p = self._create_pipeline(sensor_id_list, models)
         elif type(models) == dict:
-            raise NotImplementedError
+            self._p = self._create_pipeline_choose_cams(sensor_id_list, models)
 
         self._bus = self._p.get_bus()
         self._bus.add_signal_watch()
@@ -48,9 +47,10 @@ class MultiCamPipeline(Thread):
 
         # Runtime parameters
         N_CLASSES = 4
-        self.images = [None for _ in range(0, n_cams)]
-        self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, n_cams)]
-        self.frame_n = [0 for _ in range(0, n_cams)]
+        N_CAMS = max(sensor_id_list) + 1
+        self.images = [None for _ in range(0, N_CAMS)]
+        self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, N_CAMS)]
+        self.frame_n = [0 for _ in range(0, N_CAMS)]
 
     def run(self):
         # start play back and listen to events
@@ -75,14 +75,15 @@ class MultiCamPipeline(Thread):
         while not self.running():
             time.sleep(0.1)
 
-    def _create_pipeline(self, n_cams, model_list):
+    def _create_pipeline(self, sensor_id_list, model_list):
 
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
 
         # Create and configure sources
-        sources = [_make_element_safe("nvarguscamerasrc") for _ in range(n_cams)]
-        for idx, source in enumerate(sources):
+        sources = [_make_element_safe("nvarguscamerasrc") for idx in sensor_id_list]
+
+        for idx, source in zip(sensor_id_list, sources):
             source.set_property("sensor-id", idx)
             source.set_property("bufapi-version", 1)
             source.set_property("wbmode", 1)  # 1=auto, 0=off,
@@ -95,11 +96,11 @@ class MultiCamPipeline(Thread):
         mux.set_property("live-source", 1)
         mux.set_property("width", 1920)
         mux.set_property("height", 1080)
-        mux.set_property("batch-size", n_cams)
+        mux.set_property("batch-size", len(sensor_id_list))
         mux.set_property("batched-push-timeout", 4000000)
 
         # Create nvinfers
-        nvinfers = [_make_element_safe("nvinfer") for _ in range(len(model_list))]
+        nvinfers = [_make_element_safe("nvinfer") for _ in model_list]
         for m_path, nvinf in zip(model_list, nvinfers):
             nvinf.set_property("config-file-path", m_path)
 
@@ -108,8 +109,8 @@ class MultiCamPipeline(Thread):
         nvosd = _make_element_safe("nvdsosd")
 
         tiler = _make_element_safe("nvmultistreamtiler")
-        tiler.set_property("rows", 2)
-        tiler.set_property("columns", 2)
+        tiler.set_property("rows", 3)
+        tiler.set_property("columns", 3)
         tiler.set_property("width", 1920)
         tiler.set_property("height", 1080)
 
@@ -181,7 +182,7 @@ class MultiCamPipeline(Thread):
 
         return pipeline
 
-    def _create_pipeline_side_by_side_models(
+    def _create_pipeline_choose_cams(
         self,
         n_cams,
         models=["models/peoplenet_dla_0.txt", "models/resnet10_4class_detector.txt"],
@@ -224,10 +225,10 @@ class MultiCamPipeline(Thread):
 
         # Create and configure
         tiler = _make_element_safe("nvmultistreamtiler")
-        tiler.set_property("rows", 2)
-        tiler.set_property("columns", 2)
-        tiler.set_property("width", 2)
-        tiler.set_property("height", 2)
+        tiler.set_property("rows", 3)
+        tiler.set_property("columns", 3)
+        tiler.set_property("width", 1920)
+        tiler.set_property("height", 1080)
 
         # Render with EGL GLE sink
         transform = _make_element_safe("nvegltransform")
