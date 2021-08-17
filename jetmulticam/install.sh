@@ -15,8 +15,10 @@ sudo make install
 # build pyds bindings
 cd /opt/nvidia/deepstream/deepstream/lib 
 sudo python3 setup.py install
-
 sudo apt install cuda-nvrtc-10-2
+
+# Add /home/nx/.local/bin/
+export PATH="$HOME/.local/bin:$PATH"
 
 # Give us read permissions to the mdoel
 sudo chmod -R +r /opt/nvidia/deepstream/deepstream-5.1/samples/models
