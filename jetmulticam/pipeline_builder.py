@@ -168,8 +168,17 @@ class MultiCamPipeline(Thread):
         tiler.link(queue)
         queue.link(overlaysink)
 
+        # Alternative renderer
         # tiler.link(transform)
         # transform.link(renderer)
+
+        # Save  h264 to file
+        # queue.link(nvvideoconvert_tiler_enc)
+        # nvvideoconvert_tiler_enc.link(nvv4l2h264enc)
+        # nvv4l2h264enc.link(capsfilter)
+        # capsfilter.link(h264parse)
+        # h264parse.link(qtmux)
+        # qtmux.link(filesink)
 
         # Register callback on OSD sinkpad.
         # This way we get access to object detection results

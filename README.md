@@ -25,45 +25,50 @@ from jetmulticam import MultiCamPipeline, models
 import vehicle
 
 pipeline = MultiCamPipeline(
-    # dynamically create pipeline for n cameras 1..6
-    n_cams=3, 
-    models=[models.PeopleNet.DLA0, models.DashCamNet.DLA1]
-    # Saving stills
-    save_jpgs=True,
-    save_jpgs_path="/home/nx/logs/images/", 
-    # Saving h264 stream
+    cam_ids = [0, 1, 2]  #  dynamically create pipeline for n cameras 1..6
+    models=[
+        models.PeopleNet.DLA0, # DNNs to perform inference with
+        models.DashCamNet.DLA1
+        ]
+    # Saving h264 stream # TODO: add option for jpg stills?
     save_h264=True,
     save_h264_path="/home/nx/logs/videos",
     # Streaming
-    publish_rtsp_cam=0,
+    publish_rtsp_cam=True,
     publish_rtsp_port=5000
 )
 pipeline.start()
 pipeline.wait_ready()
 ```
 
-### Getting the images and detection results
+### Consuming the frames / detection results
 ```python
-# Ready image mapped to CPU memory
-img = pipeline.cameras[0].image  # np.array with shape (1080, 1920, 3)
-# Detection results from the models
+# Ready image mapped to CPU memory as
+# np.array with shape (1080, 1920, 3)
+img = pipeline.cameras[0].image  
+# Detection results from the models as python dicts
 detections = pipeline.cameras[0].obj_dets
-pipeline.cameras[0].face_dets
 ```
 
 ## More advanced/specific uses
 
-### Specify cameras by their sensors id
+### Supported models / acceleratorss
 ```python
 pipeline = MultiCamPipeline(
-    # n_cams=3, 
-    cam_ids = [4, 5, 6] # Cameras 0-3 are stereo pairs and are used for something else
-    models=[models.PeopleNet.DLA0, models.DashCamNet.DLA1]
+    cam_ids = [0, 1, 2]
+    models=[
+        models.PeopleNet.DLA0,
+        models.PeopleNet.DLA1,
+        models.PeopleNet.GPU,
+        models.DashCamNet.DLA0,
+        models.DashCamNet.DLA1,
+        models.DashCamNet.GPU
+        ]
     # ...
 )
 ```
 
-### Specify which models should run inference on which cameras:
+### Map specific images to specific models for inference:
 ```python
 pipeline = MultiCamPipeline(
     cam_ids = list(range(6)),
@@ -98,3 +103,8 @@ Ready pipelines for specific multicamera usecase deployable via `gst-launch-1.0`
 - [x] Pano stitcher demo
 - [ ] Robot demo in Endeavor
 - [ ] `install.sh` -> `setup.py` for easier pip3 install
+
+
+ gst-launch-1.0 -v udpsrc port=5000 ! \
+ "application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! \
+ rtph264depay ! h264parse ! decodebin ! videoconvert ! autovideosink sync=false
