@@ -18,12 +18,11 @@ from .gstutils import _err_if_none, _make_element_safe, _sanitize
 
 
 class MultiCamPipeline(Thread):
-    def __init__(self, n_cams, models=None, *args, **kwargs):
+    def __init__(self, n_cams, models, *args, **kwargs):
         """
         models parameter can be:
         - `dict`: mapping of models->sensor-ids to infer on
         - `list`: list of models to use on frames from all cameras
-        - `None`: don't perform inference
         """
 
         super().__init__()
@@ -49,7 +48,7 @@ class MultiCamPipeline(Thread):
 
         # Runtime parameters
         N_CLASSES = 4
-        self.images = [np.zeros((10, 10)) for _ in range(0, n_cams)]
+        self.images = [None for _ in range(0, n_cams)]
         self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, n_cams)]
         self.frame_n = [0 for _ in range(0, n_cams)]
 
@@ -60,10 +59,21 @@ class MultiCamPipeline(Thread):
         self._p.set_state(Gst.State.PLAYING)
         try:
             self._mainloop.run()
-        except Exception as e:
+        except KeyboardInterrupt as e:
             print(e)
         finally:
             self._p.set_state(Gst.State.NULL)
+
+    def stop(self):
+        self._p.set_state(Gst.State.NULL)
+
+    def running(self):
+        _, state, _ = self._p.get_state(1)
+        return True if state == Gst.State.PLAYING else False
+
+    def wait_ready(self):
+        while not self.running():
+            time.sleep(0.1)
 
     def _create_pipeline(self, n_cams, model_list):
 
@@ -75,19 +85,22 @@ class MultiCamPipeline(Thread):
         for idx, source in enumerate(sources):
             source.set_property("sensor-id", idx)
             source.set_property("bufapi-version", 1)
+            source.set_property("wbmode", 1)  # 1=auto, 0=off,
+            source.set_property("aeantibanding", 3)  # 3=60Hz, 2=50Hz, 1=auto, 0=off
+            source.set_property("tnr-mode", 0)
+            source.set_property("ee-mode", 0)
 
         # Create muxer
         mux = _make_element_safe("nvstreammux")
         mux.set_property("live-source", 1)
         mux.set_property("width", 1920)
         mux.set_property("height", 1080)
-        mux.set_property("batch-size", 3)
+        mux.set_property("batch-size", n_cams)
         mux.set_property("batched-push-timeout", 4000000)
 
         # Create nvinfers
         nvinfers = [_make_element_safe("nvinfer") for _ in range(len(model_list))]
         for m_path, nvinf in zip(model_list, nvinfers):
-            print(f"Kurwa: {m_path}")
             nvinf.set_property("config-file-path", m_path)
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
@@ -97,8 +110,8 @@ class MultiCamPipeline(Thread):
         tiler = _make_element_safe("nvmultistreamtiler")
         tiler.set_property("rows", 2)
         tiler.set_property("columns", 2)
-        tiler.set_property("width", 2)
-        tiler.set_property("height", 2)
+        tiler.set_property("width", 1920)
+        tiler.set_property("height", 1080)
 
         # Render with EGL GLE sink
         transform = _make_element_safe("nvegltransform")
@@ -275,10 +288,6 @@ class MultiCamPipeline(Thread):
 
         return pipeline
 
-    def running(self):
-        _, state, _ = self._p.get_state(1)
-        return True if state == Gst.State.PLAYING else False
-
     def _osd_callback(self, pad, info, u_data):
         start = time.perf_counter()
 
@@ -312,6 +321,7 @@ class MultiCamPipeline(Thread):
 
                 # Store images
                 self.images[cam_id] = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+                self.images[cam_id] = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
                 self.frame_n[cam_id] = frame_meta.frame_num
 
             except StopIteration:
@@ -333,40 +343,40 @@ class MultiCamPipeline(Thread):
                 except StopIteration:
                     break
 
-            display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
-            display_meta.num_labels = 1
-            py_nvosd_text_params = display_meta.text_params[0]
+            # display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
+            # display_meta.num_labels = 1
+            # py_nvosd_text_params = display_meta.text_params[0]
 
-            py_nvosd_text_params.display_text = "Frame Number={} Number of Objects={} Vehicle_count={} Person_count={}".format(
-                self._frame_n,
-                num_rects,
-                self._detections[PGIE_CLASS_ID_VEHICLE],
-                self._detections[PGIE_CLASS_ID_PERSON],
-            )
+            # py_nvosd_text_params.display_text = "Frame Number={} Number of Objects={} Vehicle_count={} Person_count={}".format(
+            #     self._frame_n,
+            #     num_rects,
+            #     self._detections[PGIE_CLASS_ID_VEHICLE],
+            #     self._detections[PGIE_CLASS_ID_PERSON],
+            # )
 
-            # Now set the offsets where the string should appear
-            py_nvosd_text_params.x_offset = 10
-            py_nvosd_text_params.y_offset = 12
+            # # Now set the offsets where the string should appear
+            # py_nvosd_text_params.x_offset = 10
+            # py_nvosd_text_params.y_offset = 12
 
-            # Font , font-color and font-size
-            py_nvosd_text_params.font_params.font_name = "Serif"
-            py_nvosd_text_params.font_params.font_size = 10
-            # set(red, green, blue, alpha); set to White
-            py_nvosd_text_params.font_params.font_color.set(1.0, 1.0, 1.0, 1.0)
+            # # Font , font-color and font-size
+            # py_nvosd_text_params.font_params.font_name = "Serif"
+            # py_nvosd_text_params.font_params.font_size = 10
+            # # set(red, green, blue, alpha); set to White
+            # py_nvosd_text_params.font_params.font_color.set(1.0, 1.0, 1.0, 1.0)
 
-            # Text background color
-            py_nvosd_text_params.set_bg_clr = 1
-            # set(red, green, blue, alpha); set to Black
-            py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
-            # Using pyds.get_string() to get display_text as string
-            # print(pyds.get_string(py_nvosd_text_params.display_text))
-            pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
+            # # Text background color
+            # py_nvosd_text_params.set_bg_clr = 1
+            # # set(red, green, blue, alpha); set to Black
+            # py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
+            # # Using pyds.get_string() to get display_text as string
+            # # print(pyds.get_string(py_nvosd_text_params.display_text))
+            # pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
             try:
                 l_frame = l_frame.next
             except StopIteration:
                 break
 
-        print(f"Callback took {1000 * (time.perf_counter() - start)} ms")
+        # print(f"Callback took {1000 * (time.perf_counter() - start)} ms")
         return Gst.PadProbeReturn.OK
 
 
