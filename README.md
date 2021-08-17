@@ -2,78 +2,95 @@
 
 An easy-to-use library for handling multiple cameras on Nvidia Jetson.
 
-## Installation
-```
+## Installation and quickstart
+
+Install
+```bash
 git clone ssh://git@gitlab-master.nvidia.com:12051/tlewicki/multicamera-robot.git
 cd multicamera-robot
 bash install.sh
 ```
 
+Run demo
+```
+python3 run.py
+```
+
 ## Quickstart
 
+### Instantiating the pipeline
 ```python
 from jetmulticam import MultiCamPipeline, models
+import vehicle
 
 pipeline = MultiCamPipeline(
-    n_cams=3,  # dynamically create pipeline for n cameras 1..6
-    models=[
-        models.PeopleNet.DLA0,
-        models.DashCamNet.DLA1
-        ],
-    save_images_path="/home/nx/logs/",
-    save_h264_path="/home/nx/logs/",
-    publish_rtsp_cam_id=0,
-    publish_rtsp_port=5000,
+    # dynamically create pipeline for n cameras 1..6
+    n_cams=3, 
+    models=[models.PeopleNet.DLA0, models.DashCamNet.DLA1]
+    # Saving stills
+    save_jpgs=True,
+    save_jpgs_path="/home/nx/logs/images/", 
+    # Saving h264 stream
+    save_h264=True,
+    save_h264_path="/home/nx/logs/videos",
+    # Streaming
+    publish_rtsp_cam=0,
+    publish_rtsp_port=5000
 )
-
-img = pipeline.cameras[0].image  # (1080, 1920, 3) buffer mapped to np.array
-detections = pipeline.cameras[0].obj_dets # Detection results from the models
-
-
-# Even though we're running 3 camera streams through 2 models, 
-# GPU usage near 0% - we're free to run our DNN application
-import torch
-from navigation import NavDNN, transform
-
-net = NavDNN()
-net = net.to("cuda:0")
-net.eval()
-
-
-# For example, we can run end-to-end DNN navigation loop
-while True:
-    arr = pipeline.cameras[0].image
-    img = Image.fromarray(arr)
-    batch_in = transform(img)
-    theta = net(batch_in)[0]
-    vehicle.set_steering(theta)
+pipeline.start()
+pipeline.wait_ready()
 ```
 
-### Advanced DNN configuration
+### Getting the images and detection results
+```python
+# Ready image mapped to CPU memory
+img = pipeline.cameras[0].image  # np.array with shape (1080, 1920, 3)
+# Detection results from the models
+detections = pipeline.cameras[0].obj_dets
+pipeline.cameras[0].face_dets
+```
 
-We can choose  on selected streams
+## More advanced/specific uses
 
+### Specify cameras by their sensors id
 ```python
 pipeline = MultiCamPipeline(
-    n_cams=3,  # dynamically create pipeline for n cameras 1..6
-    models={
-            models.DashCamNet.GPU: [0,1], # mapping from model -> list of sensor-id
-            models.PeopleNet.DLA0: [2],
-            models.PeopleNet.DLA1: [3]
-            }
+    # n_cams=3, 
+    cam_ids = [2, 3, 4, 5] # (Let's assume cameras 0, 1, 2 are used for something else)
+    models=[models.PeopleNet.DLA0, models.DashCamNet.DLA1]
+    # ...
 )
 ```
 
-## See also
+### Specify which models should run inference on which cameras:
+```python
+pipeline = MultiCamPipeline(
+    cam_ids = list(range(6)),
+    models={
+        models.PeopleNet.DLA0: [0, 1, 2],
+        models.PeopleNet.DLA1: [3, 4, 5],
+        models.DashCamNet.GPU: [0, 1, 2, 3, 4, 5],
+        }
+    # ...
+)
+```
 
-See also ready pipeline examples in [ready_pipelines/](ready_pipelines/)
+## Examples showing custom application on top of jetmulticam
 
+Build your application on top of `jetmulticam`
+- [examples/00-example-panorama.ipynb](examples/00-example-panorama.ipynb)
+- [examples/01-example-pytorch.ipynb](examples/01-example-pytorch.ipynb)
+- [examples/02-example-navigation.ipynb](examples/02-example-navigation.ipynb))
+- ?
+
+## More
+Ready pipelines for specific multicamera usecase deployable via `gst-launch-1.0` are available at: [ready_pipelines](ready_pipelines)
 
 ## TODOs:
 
 - [x] Add programatic support for multiple sources
 - [x] Add programatic support for multiple models
-- [ ] Pano stitcher demo
 - [ ] Add the diagram of the underlying gstreamer pipeline
+- [x] Pano stitcher demo
 - [ ] Inspection robot demo
-- [ ] `install.sh` -> `setup.py`
+- [ ] `install.sh` -> `setup.py` for easier pip3 install
