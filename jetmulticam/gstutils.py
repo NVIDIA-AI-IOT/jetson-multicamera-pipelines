@@ -36,9 +36,26 @@ def _make_element_safe(el_type: str, el_name=None) -> Gst.Element:
         print(f"Pipeline element is None!")
         # TODO: narrow down the error
         # TODO: use Gst.ElementFactory.find to generate a more informative error message
-        raise Error(f"Could not create element {el_type}")
+        raise NameError(f"Could not create element {el_type}")
 
+def bus_call(bus, message, loop):
+    # Taken from:
+    # https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/blob/6aabcaf85a9e8f11e9a4c39ab1cd46554de7c578/apps/common/bus_call.py
+    
+    t = message.type
+    if t == Gst.MessageType.EOS:
+        sys.stdout.write("End-of-stream\n")
+        loop.quit()
+    elif t==Gst.MessageType.WARNING:
+        err, debug = message.parse_warning()
+        sys.stderr.write("Warning: %s: %s\n" % (err, debug))
+    elif t == Gst.MessageType.ERROR:
+        err, debug = message.parse_error()
+        sys.stderr.write("Error: %s: %s\n" % (err, debug))
+        loop.quit()
+    return True
 
+    
 class GListIterator:
     """
     Implements python iterator protocol for pyds.GList type
