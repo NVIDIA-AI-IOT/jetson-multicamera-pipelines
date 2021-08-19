@@ -1,5 +1,18 @@
 # Encoding
 
+
+
+### Record video with camera
+
+gst-launch-1.0 \
+nvarguscamerasrc bufapi-version=1 sensor-id=0 ! \
+nvvideoconvert ! \
+nvv4l2h264enc bitrate=10000000 ! \
+h264parse ! qtmux ! filesink sync=true location=test.mp4 -e;
+
+
+
+
 ### Inferenece -> tiler -> h264 -> mp4
 
 ```
