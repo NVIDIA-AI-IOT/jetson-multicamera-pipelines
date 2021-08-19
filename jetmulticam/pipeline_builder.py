@@ -12,9 +12,8 @@ import pyds
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
-from .common.bus_call import bus_call
 
-from .gstutils import _err_if_none, _make_element_safe, _sanitize
+from .gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
 
 
 class MultiCamPipeline(Thread):
@@ -35,9 +34,9 @@ class MultiCamPipeline(Thread):
 
         # gst pipeline object
         if type(models) == list:
-            self._p = self._create_pipeline(sensor_id_list, models)
+            self._p = self._create_pipeline_fully_connected(sensor_id_list, models)
         elif type(models) == dict:
-            self._p = self._create_pipeline_choose_cams(sensor_id_list, models)
+            self._p = self._create_pipeline_sparsely_connected(sensor_id_list, models)
 
         self._bus = self._p.get_bus()
         self._bus.add_signal_watch()
@@ -75,7 +74,14 @@ class MultiCamPipeline(Thread):
         while not self.running():
             time.sleep(0.1)
 
-    def _create_pipeline(self, sensor_id_list, model_list):
+    def wait_ready(self):
+        while not self.running():
+            time.sleep(0.1)
+
+    def _create_pipeline_fully_connected(self, sensor_id_list, model_list):
+        """
+        Images from all sources will go through all DNNs
+        """
 
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
@@ -124,16 +130,7 @@ class MultiCamPipeline(Thread):
 
         # Add everything to the pipeline
         # elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, transform, renderer]
-        elements = [
-            *sources,
-            mux,
-            *nvinfers,
-            nvvidconv,
-            nvosd,
-            tiler,
-            queue,
-            overlaysink,
-        ]
+        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, overlaysink]
 
         for el in elements:
             pipeline.add(el)
@@ -164,9 +161,7 @@ class MultiCamPipeline(Thread):
 
         nvvidconv.link(nvosd)
         nvosd.link(tiler)
-
-        tiler.link(queue)
-        queue.link(overlaysink)
+        tiler.link(overlaysink)
 
         # Alternative renderer
         # tiler.link(transform)
@@ -179,113 +174,6 @@ class MultiCamPipeline(Thread):
         # capsfilter.link(h264parse)
         # h264parse.link(qtmux)
         # qtmux.link(filesink)
-
-        # Register callback on OSD sinkpad.
-        # This way we get access to object detection results
-        osdsinkpad = nvosd.get_static_pad("sink")
-
-        if osdsinkpad is None:
-            raise Error  # TODO: narrow down
-
-        osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._osd_callback, 0)
-
-        return pipeline
-
-    def _create_pipeline_choose_cams(
-        self,
-        n_cams,
-        models=["models/peoplenet_dla_0.txt", "models/resnet10_4class_detector.txt"],
-    ):
-
-        pipeline = Gst.Pipeline()
-        _err_if_none(pipeline)
-
-        # Create and configure sources
-        sources = [_make_element_safe("nvarguscamerasrc") for _ in range(n_cams)]
-        for idx, source in enumerate(sources):
-            source.set_property("sensor-id", idx)
-            source.set_property("bufapi-version", 1)
-
-        # Create tees for every source
-        tees = [_make_element_safe("tee") for _ in range(n_cams)]
-
-        # models = ["models/peoplenet_dla_0.txt", "models/peoplenet_dla_1.txt"]
-
-        # models = ["models/peoplenet.txt"]
-
-        # Create muxers for batching input to every model
-        muxers = [_make_element_safe("nvstreammux") for m in enumerate(models)]
-
-        for mux in muxers:
-            mux.set_property("live-source", 1)
-            mux.set_property("width", 1920)
-            mux.set_property("height", 1080)
-            mux.set_property("batch-size", 3)
-            mux.set_property("batched-push-timeout", 4000000)
-
-        # Create and configure nvinfers
-        nvinfers = [_make_element_safe("nvinfer") for _ in range(len(models))]
-        for m_path, nvinf in zip(models, nvinfers):
-            nvinf.set_property("config-file-path", m_path)
-
-        # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
-        nvvidconv = _make_element_safe("nvvideoconvert")
-        nvosd = _make_element_safe("nvdsosd")
-
-        # Create and configure
-        tiler = _make_element_safe("nvmultistreamtiler")
-        tiler.set_property("rows", 3)
-        tiler.set_property("columns", 3)
-        tiler.set_property("width", 1920)
-        tiler.set_property("height", 1080)
-
-        # Render with EGL GLE sink
-        transform = _make_element_safe("nvegltransform")
-        renderer = _make_element_safe("nveglglessink")
-
-        queue = _make_element_safe("queue")
-        overlaysink = _make_element_safe("nvoverlaysink")
-        overlaysink.set_property("sync", 0)  # crucial for performance of the pipeline
-
-        # Add everything to the pipeline
-        # elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, transform, renderer]
-        elements = [
-            *sources,
-            mux,
-            *nvinfers,
-            nvvidconv,
-            nvosd,
-            tiler,
-            queue,
-            overlaysink,
-        ]
-
-        for el in elements:
-            pipeline.add(el)
-
-        # Link source elements to tees
-        for s, t in zip(sources, tees):
-            s.link(t)
-
-        # Link tees to muxers
-        for idx, tee in enumerate(tees):
-            for jdx, mux in enumerate(muxers):
-                srcpad = _sanitize(tee.get_request_pad(f"src_{jdx}"))
-                sinkpad = _sanitize(mux.get_request_pad(f"sink_{idx}"))
-                srcpad.link(sinkpad)
-
-        # Link muxers to nvinfers
-        for mux, nvinf in zip(muxers, nvinfers):
-            mux.link(nvinf)
-
-        nvvidconv.link(nvosd)
-        nvosd.link(tiler)
-
-        tiler.link(queue)
-        queue.link(overlaysink)
-
-        # tiler.link(transform)
-        # transform.link(renderer)
 
         # Register callback on OSD sinkpad.
         # This way we get access to object detection results
