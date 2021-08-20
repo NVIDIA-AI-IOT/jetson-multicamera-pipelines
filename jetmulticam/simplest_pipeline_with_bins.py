@@ -17,7 +17,7 @@ def make_nvenc_bin() -> Gst.Bin:
 
     # parser, mux
     parser = _make_element_safe("h264parse")
-    qtmux = _make_element_safe("qtmux")
+    mux = _make_element_safe("matroskamux")
 
     # filesink
     filesink = _make_element_safe("filesink")
@@ -25,14 +25,14 @@ def make_nvenc_bin() -> Gst.Bin:
     filesink.set_property("location", "test.mp4")
 
     # Add elements to bin before linking
-    for el in [conv, enc, parser, qtmux, filesink]:
+    for el in [conv, enc, parser, mux, filesink]:
         h264sink.add(el)
 
     # Link bin elements
     conv.link(enc)
     enc.link(parser)
-    parser.link(qtmux)
-    qtmux.link(filesink)
+    parser.link(mux)
+    mux.link(filesink)
 
     enter_pad = _sanitize(conv.get_static_pad("sink"))
     gp = Gst.GhostPad.new(name="sink", target=enter_pad)

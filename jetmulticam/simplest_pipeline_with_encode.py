@@ -22,14 +22,14 @@ enc = _make_element_safe("nvv4l2h264enc")
 enc.set_property("bitrate", 10000000)
 
 parser = _make_element_safe("h264parse")
-qtmux = _make_element_safe("qtmux")
+mux = _make_element_safe("matroskamux")
 
 filesink = _make_element_safe("filesink")
 filesink.set_property("sync", 1)
-filesink.set_property("location", "test.mp4")
+filesink.set_property("location", "test.mkv")
 
 
-elements = [cam, conv, enc, parser, qtmux, filesink]
+elements = [cam, conv, enc, parser, mux, filesink]
 
 for el in elements:
     pipeline.add(el)
@@ -37,8 +37,8 @@ for el in elements:
 cam.link(conv)
 conv.link(enc)
 enc.link(parser)
-parser.link(qtmux)
-qtmux.link(filesink)
+parser.link(mux)
+mux.link(filesink)
 
 # create an event loop and feed gstreamer bus mesages to it
 loop = GObject.MainLoop()
