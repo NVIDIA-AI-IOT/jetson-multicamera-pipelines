@@ -109,10 +109,10 @@ class MultiCamPipeline(Thread):
         nvosd = _make_element_safe("nvdsosd")
 
         tiler = _make_element_safe("nvmultistreamtiler")
-        tiler.set_property("rows", 3)
+        tiler.set_property("rows", 1)
         tiler.set_property("columns", 3)
-        tiler.set_property("width", 1920)
-        tiler.set_property("height", 1080)
+        tiler.set_property("width", 2*1920) # Encoder crashes when we attempt encoding 5760 x 1080
+        tiler.set_property("height", 720)
 
         # Render with EGL GLE sink
         transform = _make_element_safe("nvegltransform")
