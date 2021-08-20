@@ -14,6 +14,7 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
 from .gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
+from .elements import make_nvenc_bin
 
 
 class MultiCamPipeline(Thread):
@@ -130,7 +131,9 @@ class MultiCamPipeline(Thread):
 
         # Add everything to the pipeline
         # elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, transform, renderer]
-        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, overlaysink]
+
+        nvenc_sink = make_nvenc_bin()
+        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, nvenc_sink]
 
         for el in elements:
             pipeline.add(el)
@@ -161,7 +164,7 @@ class MultiCamPipeline(Thread):
 
         nvvidconv.link(nvosd)
         nvosd.link(tiler)
-        tiler.link(overlaysink)
+        tiler.link(nvenc_sink)
 
         # Alternative renderer
         # tiler.link(transform)
