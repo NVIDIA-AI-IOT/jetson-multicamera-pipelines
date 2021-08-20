@@ -1,2 +1,2 @@
-# Expose API for the pipeline 
+# Expose API for the pipeline
 from .builder import MultiCamPipeline

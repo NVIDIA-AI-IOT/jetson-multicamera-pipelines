@@ -1,8 +1,10 @@
 import sys
 
 import gi
+
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
+
 
 def _err_if_none(element):
     if element is None:
@@ -40,15 +42,16 @@ def _make_element_safe(el_type: str, el_name=None) -> Gst.Element:
         # TODO: use Gst.ElementFactory.find to generate a more informative error message
         raise NameError(f"Could not create element {el_type}")
 
+
 def bus_call(bus, message, loop):
     # Taken from:
     # https://github.com/NVIDIA-AI-IOT/deepstream_python_apps/blob/6aabcaf85a9e8f11e9a4c39ab1cd46554de7c578/apps/common/bus_call.py
-    
+
     t = message.type
     if t == Gst.MessageType.EOS:
         sys.stdout.write("End-of-stream\n")
         loop.quit()
-    elif t==Gst.MessageType.WARNING:
+    elif t == Gst.MessageType.WARNING:
         err, debug = message.parse_warning()
         sys.stderr.write("Warning: %s: %s\n" % (err, debug))
     elif t == Gst.MessageType.ERROR:
@@ -57,7 +60,7 @@ def bus_call(bus, message, loop):
         loop.quit()
     return True
 
-    
+
 class GListIterator:
     """
     Implements python iterator protocol for pyds.GList type
