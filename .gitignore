@@ -180,7 +180,7 @@ remap_rectify_params.yml # Stereo rectify parameters
 
 # configs for nvinfer
 models/
-.txt
+*.txt
 
 # video files
 *.h264
