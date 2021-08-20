@@ -18,7 +18,7 @@ from .elements import make_nvenc_bin, make_camera_configured
 
 
 class MultiCamPipeline(Thread):
-    def __init__(self, sensor_id_list, models, *args, **kwargs):
+    def __init__(self, sensor_id_list, models, save_h264=True, *args, **kwargs):
         """
         models parameter can be:
         - `dict`: mapping of models->sensor-ids to infer on
@@ -124,7 +124,7 @@ class MultiCamPipeline(Thread):
         # Add everything to the pipeline
         # elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, transform, renderer]
 
-        nvenc_sink = make_nvenc_bin()
+        nvenc_sink = make_nvenc_bin(filepath='/home/nx/logs/videos/test.mkv')
         elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, nvenc_sink]
 
         for el in elements:

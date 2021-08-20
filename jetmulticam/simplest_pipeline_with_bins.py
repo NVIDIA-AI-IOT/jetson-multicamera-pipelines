@@ -21,8 +21,8 @@ def make_nvenc_bin() -> Gst.Bin:
 
     # filesink
     filesink = _make_element_safe("filesink")
-    filesink.set_property("sync", 1)
-    filesink.set_property("location", "test.mp4")
+    filesink.set_property("sync", 0)
+    filesink.set_property("location", "test.mkv")
 
     # Add elements to bin before linking
     for el in [conv, enc, parser, mux, filesink]:
