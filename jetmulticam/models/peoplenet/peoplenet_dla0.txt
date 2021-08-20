@@ -9,7 +9,6 @@ labelfile-path=./tlt_peoplenet_pruned_v2.0/labels.txt
 model-engine-file=./tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt_b3_dla0_fp16.engine
 input-dims=3;544;960;0
 uff-input-blob-name=input_1
-batch-size=3
 process-mode=1
 model-color-format=0
 ## 0=FP32, 1=INT8, 2=FP16 mode

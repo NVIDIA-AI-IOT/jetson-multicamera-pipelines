@@ -103,6 +103,8 @@ class MultiCamPipeline(Thread):
         nvinfers = [_make_element_safe("nvinfer") for _ in model_list]
         for m_path, nvinf in zip(model_list, nvinfers):
             nvinf.set_property("config-file-path", m_path)
+            nvinf.set_property("batch-size", 3)
+            # nvinf.set_property("interval", 5) # to infer every n batches
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
         nvvidconv = _make_element_safe("nvvideoconvert")
