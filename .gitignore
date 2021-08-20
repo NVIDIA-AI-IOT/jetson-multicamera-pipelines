@@ -171,7 +171,17 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-*.pt
-07-disparity-with-remap/remap_rectify_params.yml
+
+
+# Project-specific files
+
+*.pt # pytorch weights
+remap_rectify_params.yml # Stereo rectify parameters
+
+# configs for nvinfer
 models/
+.txt
+
+# video files
 *.h264
+.mkv
