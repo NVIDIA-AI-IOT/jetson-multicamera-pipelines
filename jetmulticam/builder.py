@@ -18,7 +18,7 @@ from .elements import make_nvenc_bin, make_camera_configured
 
 
 class MultiCamPipeline(Thread):
-    def __init__(self, sensor_id_list, models, save_h264=True, *args, **kwargs):
+    def __init__(self, sensor_id_list, models, *args, **kwargs):
         """
         models parameter can be:
         - `dict`: mapping of models->sensor-ids to infer on
@@ -36,15 +36,15 @@ class MultiCamPipeline(Thread):
 
         # gst pipeline object
         if type(models) == list:
-            self._p = self._create_pipeline_fully_connected(sensor_id_list, models)
+            self._p = self._create_pipeline_fully_connected(
+                sensor_id_list, models, **kwargs
+            )
         elif type(models) == dict:
             self._p = self._create_pipeline_sparsely_connected(sensor_id_list, models)
 
         self._bus = self._p.get_bus()
         self._bus.add_signal_watch()
         self._bus.connect("message", bus_call, self._mainloop)
-
-        self._pipeline = self._p
 
         # Runtime parameters
         N_CLASSES = 4
@@ -80,7 +80,15 @@ class MultiCamPipeline(Thread):
         while not self.running():
             time.sleep(0.1)
 
-    def _create_pipeline_fully_connected(self, sensor_id_list, model_list):
+    def _create_pipeline_fully_connected(
+        self,
+        sensor_id_list,
+        model_list,
+        save_h264=True,
+        save_h264_path="/home/nx/logs/videos",
+        display=True,
+        streaming=False,
+    ):
         """
         Images from all sources will go through all DNNs
         """
@@ -123,30 +131,31 @@ class MultiCamPipeline(Thread):
         tiler.set_property("height", 360)
 
         # Render with EGL GLE sink
-        transform = _make_element_safe("nvegltransform")
-        renderer = _make_element_safe("nveglglessink")
+        # transform = _make_element_safe("nvegltransform")
+        # renderer = _make_element_safe("nveglglessink")
 
-        queue = _make_element_safe("queue")
+        tee = _make_element_safe("tee")
 
-        # sink = make_nvenc_bin(filepath="/home/nx/logs/videos/test.mkv")
+        sinks = []
+        if save_h264:
+            ecodebin = make_nvenc_bin(filepath="/home/nx/logs/videos/test.mkv")
+            sinks.append(ecodebin)
+        if display:
+            overlay = _make_element_safe("nvoverlaysink")
+            overlay.set_property("sync", 0)  # crucial for performance of the pipeline
+            sinks.append(overlay)
+        if streaming:
+            raise NotImplementedError
 
-        sink = _make_element_safe("nvoverlaysink")
-        sink.set_property("sync", 0)  # crucial for performance of the pipeline
+        if len(sinks) == 0:
+            # If no other sinks are added we erminate with fakesink
+            fakesink = _make_element_safe("fakesink")
+            sinks.append(fakesink)
 
-        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, sink]
+        # Add all elements to the pipeline
+        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, tee, *sinks]
         for el in elements:
             pipeline.add(el)
-
-        # Link elements
-        # for s, t in zip(sources, tees):
-        #     s.link(t)
-
-        # Link tees to muxers
-        # for idx, tee in enumerate(tees):
-        #     for jdx, mux in enumerate(muxers):
-        #         srcpad = _sanitize(tee.get_request_pad(f"src_{jdx}"))
-        #         sinkpad = _sanitize(mux.get_request_pad(f"sink_{idx}"))
-        #         srcpad.link(sinkpad)
 
         for idx, source in enumerate(sources):
             srcpad_or_none = source.get_static_pad(f"src")
@@ -163,7 +172,21 @@ class MultiCamPipeline(Thread):
 
         nvvidconv.link(tiler)
         tiler.link(nvosd)
-        nvosd.link(sink)
+        nvosd.link(tee)
+
+        # Link tees to sinks
+        for idx, sink in enumerate(sinks):
+            # Use queues for each sink. This ensures the sinks can execute in separate threads
+            queue = _make_element_safe("queue")
+            pipeline.add(queue)
+            # tee.src_%d -> queue
+            srcpad_or_none = tee.get_request_pad(f"src_{idx}")
+            sinkpad_or_none = queue.get_static_pad("sink")
+            srcpad = _sanitize(srcpad_or_none)
+            sinkpad = _sanitize(sinkpad_or_none)
+            srcpad.link(sinkpad)
+            # queue -> sink
+            queue.link(sink)
 
         # Alternative renderer
         # tiler.link(transform)
@@ -212,7 +235,7 @@ class MultiCamPipeline(Thread):
                 img = pyds.get_nvds_buf_surface(hash(gst_buffer), cam_id)
 
                 # Store images
-                self.images[cam_id] = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+                # self.images[cam_id] = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
                 self.images[cam_id] = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
                 self.frame_n[cam_id] = frame_meta.frame_num
 
