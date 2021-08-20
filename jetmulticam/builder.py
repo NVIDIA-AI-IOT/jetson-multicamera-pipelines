@@ -14,7 +14,7 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
 from .gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
-from .elements import make_nvenc_bin
+from .elements import make_nvenc_bin, make_camera_configured
 
 
 class MultiCamPipeline(Thread):
@@ -87,16 +87,8 @@ class MultiCamPipeline(Thread):
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
 
-        # Create and configure sources
-        sources = [_make_element_safe("nvarguscamerasrc") for idx in sensor_id_list]
-
-        for idx, source in zip(sensor_id_list, sources):
-            source.set_property("sensor-id", idx)
-            source.set_property("bufapi-version", 1)
-            source.set_property("wbmode", 1)  # 1=auto, 0=off,
-            source.set_property("aeantibanding", 3)  # 3=60Hz, 2=50Hz, 1=auto, 0=off
-            source.set_property("tnr-mode", 0)
-            source.set_property("ee-mode", 0)
+        # Create pre-configured sources
+        sources = [make_camera_configured(idx) for idx in sensor_id_list]
 
         # Create muxer
         mux = _make_element_safe("nvstreammux")

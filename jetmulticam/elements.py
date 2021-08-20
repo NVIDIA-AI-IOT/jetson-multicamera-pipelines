@@ -22,7 +22,7 @@ def make_nvenc_bin() -> Gst.Bin:
     # filesink
     filesink = _make_element_safe("filesink")
     filesink.set_property("sync", 0)
-    filesink.set_property("location", "test.mp4")
+    filesink.set_property("location", "test.mkv")
 
     # Add elements to bin before linking
     for el in [conv, enc, parser, mux, filesink]:
@@ -39,3 +39,19 @@ def make_nvenc_bin() -> Gst.Bin:
     h264sink.add_pad(gp)
 
     return h264sink
+
+
+def make_camera_configured(sensor_id) -> Gst.Bin:
+    """
+    Make pre-configured camera source, so we have consistent setting across sensors
+    Switch off defaults which are not helpful for machine vision like edge-enhancement
+    """
+    cam = _make_element_safe("nvarguscamerasrc")
+    cam.set_property("sensor-id", sensor_id)
+    cam.set_property("bufapi-version", 1)
+    cam.set_property("wbmode", 1)  # 1=auto, 0=off,
+    cam.set_property("aeantibanding", 3)  # 3=60Hz, 2=50Hz, 1=auto, 0=off
+    cam.set_property("tnr-mode", 0)
+    cam.set_property("ee-mode", 0)
+
+    return cam
