@@ -115,23 +115,25 @@ class MultiCamPipeline(Thread):
         tiler.set_property("columns", 3)
         # Encoder crashes when we attempt encoding 5760 x 1080, so we set it lower
         # TODO: Is that a bug, or hw limitation?
-        tiler.set_property("width", 2 * 1920)
-        tiler.set_property("height", 720)
+
+        # tiler.set_property("width", 2 * 1920)
+        # tiler.set_property("height", 720)
+
+        tiler.set_property("width", 1920)
+        tiler.set_property("height", 360)
 
         # Render with EGL GLE sink
         transform = _make_element_safe("nvegltransform")
         renderer = _make_element_safe("nveglglessink")
 
         queue = _make_element_safe("queue")
-        overlaysink = _make_element_safe("nvoverlaysink")
-        overlaysink.set_property("sync", 0)  # crucial for performance of the pipeline
 
-        # Add everything to the pipeline
-        # elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, transform, renderer]
+        # sink = make_nvenc_bin(filepath="/home/nx/logs/videos/test.mkv")
 
-        nvenc_sink = make_nvenc_bin(filepath="/home/nx/logs/videos/test.mkv")
-        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, nvenc_sink]
+        sink = _make_element_safe("nvoverlaysink")
+        sink.set_property("sync", 0)  # crucial for performance of the pipeline
 
+        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, sink]
         for el in elements:
             pipeline.add(el)
 
