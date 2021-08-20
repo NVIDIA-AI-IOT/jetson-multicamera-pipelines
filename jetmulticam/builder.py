@@ -27,7 +27,8 @@ class MultiCamPipeline(Thread):
 
         super().__init__()
 
-        self._gobj_init = GObject.threads_init()
+        # Gstreamer init
+        GObject.threads_init()
         Gst.init(None)
 
         # create an event loop and feed gstreamer bus mesages to it
