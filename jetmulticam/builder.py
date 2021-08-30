@@ -1,5 +1,6 @@
 import logging  # TODO: print -> logging
 import sys
+import os
 import time
 from threading import Thread
 
@@ -30,6 +31,9 @@ class MultiCamPipeline(Thread):
         # Gstreamer init
         GObject.threads_init()
         Gst.init(None)
+
+        save_h264_path="/home/nx/logs/videos"
+        os.makedirs(save_h264_path, exist_ok=True)
 
         # create an event loop and feed gstreamer bus mesages to it
         self._mainloop = GObject.MainLoop()
