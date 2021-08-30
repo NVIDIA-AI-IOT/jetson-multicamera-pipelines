@@ -179,7 +179,8 @@ cython_debug/
 remap_rectify_params.yml # Stereo rectify parameters
 
 # configs for nvinfer
-models/
+models/peoplenet/tlt_peoplenet_pruned_v2.0/
+jetmulticam/models/peoplenet/tlt_peoplenet_pruned_v2.0/
 *.txt
 
 # video files
