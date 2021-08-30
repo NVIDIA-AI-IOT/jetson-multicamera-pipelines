@@ -6,7 +6,7 @@ from jetmulticam.models import PeopleNet, DashCamNet
 if __name__ == "__main__":
 
     pipeline = MultiCamPipeline(
-        sensor_id_list=[0, 1, 2],
+        sensor_id_list=[2, 0, 1],
         models=[
             PeopleNet.DLA1,
             PeopleNet.DLA0
