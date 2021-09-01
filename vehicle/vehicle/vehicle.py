@@ -1,9 +1,9 @@
 import time
-import maestro
+from .maestro import Controller
 
 class Vehicle:
     def __init__(self, dev="/dev/ttyACM0"):
-        self._maestro = maestro.Controller(dev)
+        self._maestro = Controller(dev)
 
     def __del__(self):
         # Set car in a known state, so wheels don't keep spinning
@@ -25,6 +25,8 @@ class Vehicle:
         elif value < 0:
             pwm = self.THR.DEADBAND_B + value * 100
 
+        pwm = int(pwm)
+
         self._maestro.setTarget(self.THR.CH, pwm)
 
     def set_steering(self, value):
@@ -38,6 +40,8 @@ class Vehicle:
             pwm = self.STEER.CENTER
         else:
             pwm = self.STEER.CENTER + value * 2000
+
+        pwm = int(pwm)
 
         self._maestro.setTarget(self.STEER.CH, pwm)
 
