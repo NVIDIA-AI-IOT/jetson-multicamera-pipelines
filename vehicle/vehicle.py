@@ -1,7 +1,6 @@
 import time
 import maestro
 
-
 class Vehicle:
     def __init__(self, dev="/dev/ttyACM0"):
         self._maestro = maestro.Controller(dev)
