@@ -142,7 +142,8 @@ class MultiCamPipeline(Thread):
 
         sinks = []
         if save_h264:
-            ecodebin = make_nvenc_bin(filepath="/home/nx/logs/videos/test.mkv")
+            ts = time.strftime('%Y-%m-%dT%H:%M:%S%z')
+            ecodebin = make_nvenc_bin(filepath=f"/home/nx/logs/videos/jetmulticam{ts}.mkv")
             sinks.append(ecodebin)
         if display:
             overlay = _make_element_safe("nvoverlaysink")
