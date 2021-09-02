@@ -142,7 +142,7 @@ class MultiCamPipeline(Thread):
 
         sinks = []
         if save_h264:
-            ts = time.strftime('%Y-%m-%dT%H:%M:%S%z')
+            ts = time.strftime('%Y-%m-%dT%H-%M-%S%z')
             ecodebin = make_nvenc_bin(filepath=f"/home/nx/logs/videos/jetmulticam{ts}.mkv")
             sinks.append(ecodebin)
         if display:
