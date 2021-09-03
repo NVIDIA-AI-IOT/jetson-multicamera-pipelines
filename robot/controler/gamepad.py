@@ -28,7 +28,7 @@ class ManualController(Thread):
                     state_r = 255 - e.state
                     self.t = (state_r - 127) / 127
 
-                elif e.ev_type == "Absolute" and e.code == "ABS_Z":
+                elif e.ev_type == "Absolute" and e.code == "ABS_X":
                     # Handle right stick 'X' axis as steering
 
                     state = e.state
