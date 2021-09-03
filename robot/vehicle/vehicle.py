@@ -21,9 +21,9 @@ class Vehicle:
         if value == 0:
             pwm = self.THR.STOP
         elif value > 0:
-            pwm = self.THR.DEADBAND_F + value * 100
+            pwm = self.THR.DEADBAND_F + value * 200
         elif value < 0:
-            pwm = self.THR.DEADBAND_B + value * 100
+            pwm = self.THR.DEADBAND_B + value * 200
 
         pwm = int(pwm)
 
