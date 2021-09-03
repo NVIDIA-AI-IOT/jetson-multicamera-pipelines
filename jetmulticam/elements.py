@@ -40,8 +40,7 @@ def make_nvenc_bin(filepath) -> Gst.Bin:
 
     return h264sink
 
-
-def make_camera_configured(sensor_id) -> Gst.Bin:
+def make_argus_camera_configured(sensor_id) -> Gst.Bin:
     """
     Make pre-configured camera source, so we have consistent setting across sensors
     Switch off defaults which are not helpful for machine vision like edge-enhancement
