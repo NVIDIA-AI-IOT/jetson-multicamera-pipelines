@@ -1,8 +1,13 @@
 # Inference Pipelines
 
-### Simple pipeline with 1 camera and 1 nvinfer
+### Simple pipeline with 1 nvarguscamera camera and 1 nvinfer
 ```shell
-gst-launch-1.0 nvarguscamerasrc bufapi-version=1 ! 'video/x-raw(memory:NVMM),width=1920,height=1080,framerate=30/1' ! mx.sink_0 nvstreammux width=1920 height=1080 batch-size=1 name=mx ! nvinfer config-file-path=jetmulticam/models/dashcamnet/dashcamnet_dla0.txt ! nvvideoconvert ! nvdsosd ! nvoverlaysink sync=0
+gst-launch-1.0 nvarguscamerasrc bufapi-version=1 ! 'video/x-raw(memory:NVMM),width=1920,height=1080,framerate=30/1' ! mx.sink_0 nvstreammux width=1920 height=1080 batch-size=1 name=mx ! nvinfer config-file-path=/home/nx/nv-multi-camera-robot/jetmulticam/models/peoplenet/peoplenet_dla0.txt ! nvvideoconvert ! nvdsosd ! nvoverlaysink sync=0
+```
+
+### Simple pipeline with 1 USB camera and 1 nvinfer
+```shell
+gst-launch-1.0 v4l2src device=/dev/video3 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! mx.sink_0 nvstreammux width=640 height=480 batch-size=1 name=mx ! nvinfer config-file-path=/home/nx/nv-multi-camera-robot/jetmulticam/models/peoplenet/peoplenet_dla0.txt ! nvvideoconvert ! nvdsosd ! nvoverlaysink sync=0
 ```
 
 ### Two infers back-to-back on one camera
