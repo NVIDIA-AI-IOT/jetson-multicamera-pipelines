@@ -15,7 +15,7 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
 from .gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
-from .elements import make_nvenc_bin, make_argus_camera_configured
+from .elements import make_nvenc_bin, make_argus_camera_configured, make_v4l2_cam_bin
 
 
 class MultiCamPipeline(Thread):
@@ -101,7 +101,13 @@ class MultiCamPipeline(Thread):
         _err_if_none(pipeline)
 
         # Create pre-configured sources
-        sources = [make_argus_camera_configured(idx) for idx in sensor_id_list]
+        # sources = [make_argus_camera_configured(idx) for idx in sensor_id_list]
+
+        sources = [
+            make_v4l2_cam_bin("/dev/video3"),
+            make_v4l2_cam_bin("/dev/video4"),
+            make_v4l2_cam_bin("/dev/video5")
+        ]
 
         # Create muxer
         mux = _make_element_safe("nvstreammux")

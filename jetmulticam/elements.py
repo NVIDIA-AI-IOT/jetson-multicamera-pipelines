@@ -40,6 +40,7 @@ def make_nvenc_bin(filepath) -> Gst.Bin:
 
     return h264sink
 
+
 def make_argus_camera_configured(sensor_id) -> Gst.Bin:
     """
     Make pre-configured camera source, so we have consistent setting across sensors
@@ -54,3 +55,39 @@ def make_argus_camera_configured(sensor_id) -> Gst.Bin:
     cam.set_property("ee-mode", 0)
 
     return cam
+
+
+def make_v4l2_cam_bin(dev="/dev/video3") -> Gst.Bin:
+    bin = Gst.Bin()
+
+    # Create v4l2 camera
+    src = _make_element_safe("v4l2src")
+    src.set_property("device", dev)
+
+    vidconv = _make_element_safe("videoconvert")
+    vidconv_cf = _make_element_safe("capsfilter")
+    # Ensure we output something nvvideoconvert has caps for
+    vidconv_cf.set_property(
+        "caps", Gst.Caps.from_string("video/x-raw, format=(string)RGBA")
+    )
+
+    nvvidconv = _make_element_safe("nvvideoconvert")
+    nvvidconv_cf = _make_element_safe("capsfilter")
+    nvvidconv_cf.set_property("caps", Gst.Caps.from_string("video/x-raw(memory:NVMM)"))
+
+    # Add elements to bin before linking
+    for el in [src, vidconv, vidconv_cf, nvvidconv, nvvidconv_cf]:
+        bin.add(el)
+
+    # Link bin elements
+    src.link(vidconv)
+    vidconv.link(vidconv_cf)
+    vidconv_cf.link(nvvidconv)
+    nvvidconv.link(nvvidconv_cf)
+
+    # We exit via nvvidconv source pad
+    exit_pad = _sanitize(nvvidconv_cf.get_static_pad("src"))
+    gp = Gst.GhostPad.new(name="src", target=exit_pad)
+    bin.add_pad(gp)
+
+    return bin
