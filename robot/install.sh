@@ -1,13 +1,17 @@
 install_logitech_drivers()
 {
-    wget https://github.com/jetsonhacks/logitech-f710-module/raw/master/bin/l4t-32-5-1/hid-logitech.ko -O /tmp/hid-logitech.ko
-    wget https://raw.githubusercontent.com/jetsonhacks/logitech-f710-module/master/install-module.sh -O /tmp/install-module.sh
-    sudo /tmp/install-module.sh
+    wget https://github.com/jetsonhacks/logitech-f710-module/raw/master/bin/l4t-32-5-1/hid-logitech.ko -O hid-logitech.ko
+    wget https://raw.githubusercontent.com/jetsonhacks/logitech-f710-module/master/install-module.sh -O install-module.sh
+    sudo install-module.sh
 }
 
-# Install python packages
+usb_permissions()
+{
+    # Let user talk to maestro servo controller
+    sudo adduser $USER dialout;
+}
+
+echo "Installing..."
 pip3 install -r requirements.txt
-# let user talk to maestro over USB
-sudo adduser $USER dialout
-# Install logitech kernel driver
 install_logitech_drivers
+usb_permissions
