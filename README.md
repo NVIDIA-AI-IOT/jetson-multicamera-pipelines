@@ -1,5 +1,11 @@
 # Multi Camera Robot
 
+
+
+https://user-images.githubusercontent.com/26127866/131947398-59a12a95-82f6-4b48-8af7-34a325f0c0f4.mp4
+
+
+
 A multi-camera robot capable of:
 - 2 × HW accelerated DNN object detection on 3 camera streams @ 25fps
 <!-- - Autonomous navigation/path following using (another) DNN -->
