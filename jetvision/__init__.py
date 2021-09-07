@@ -1,2 +1,3 @@
-# Expose API for the pipeline
-from .builder import MultiCamPipeline
+# Expose top-level API for the package
+
+from pipelines.multicam import MultiCamPipeline
