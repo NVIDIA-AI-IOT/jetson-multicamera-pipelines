@@ -14,12 +14,12 @@ import pyds
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
-from .gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
-from .elements import make_nvenc_bin, make_argus_camera_configured, make_v4l2_cam_bin
+from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
+from .bins import make_nvenc_bin, make_argus_camera_configured, make_v4l2_cam_bin
 
 
 class MultiCamPipeline(Thread):
-    def __init__(self, sensor_id_list, models, *args, **kwargs):
+    def __init__(self, cameras, models, *args, **kwargs):
         """
         models parameter can be:
         - `dict`: mapping of models->sensor-ids to infer on
@@ -32,7 +32,7 @@ class MultiCamPipeline(Thread):
         GObject.threads_init()
         Gst.init(None)
 
-        save_h264_path="/home/nx/logs/videos"
+        save_h264_path = "/home/nx/logs/videos"
         os.makedirs(save_h264_path, exist_ok=True)
 
         # create an event loop and feed gstreamer bus mesages to it
@@ -40,11 +40,9 @@ class MultiCamPipeline(Thread):
 
         # gst pipeline object
         if type(models) == list:
-            self._p = self._create_pipeline_fully_connected(
-                sensor_id_list, models, **kwargs
-            )
+            self._p = self._create_pipeline_fully_connected(cameras, models, **kwargs)
         elif type(models) == dict:
-            self._p = self._create_pipeline_sparsely_connected(sensor_id_list, models)
+            self._p = self._create_pipeline_sparsely_connected(cameras, models)
 
         self._bus = self._p.get_bus()
         self._bus.add_signal_watch()
@@ -52,7 +50,7 @@ class MultiCamPipeline(Thread):
 
         # Runtime parameters
         N_CLASSES = 4
-        N_CAMS = max(sensor_id_list) + 1
+        N_CAMS = max(cameras) + 1
         self.images = [None for _ in range(0, N_CAMS)]
         self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, N_CAMS)]
         self.frame_n = [0 for _ in range(0, N_CAMS)]
@@ -86,7 +84,7 @@ class MultiCamPipeline(Thread):
 
     def _create_pipeline_fully_connected(
         self,
-        sensor_id_list,
+        cameras,
         model_list,
         save_h264=True,
         save_h264_path="/home/nx/logs/videos",
@@ -101,22 +99,36 @@ class MultiCamPipeline(Thread):
         _err_if_none(pipeline)
 
         # Create pre-configured sources
-        # sources = [make_argus_camera_configured(idx) for idx in sensor_id_list]
+        sources = []
 
-        sources = [
-            make_argus_camera_configured(0),
-            make_argus_camera_configured(1),
-            make_argus_camera_configured(2),
-            make_v4l2_cam_bin("/dev/video3"),
-            make_v4l2_cam_bin("/dev/video4")
-        ]
+        for c in cameras:
+            # int -> argussrc
+            if type(c) is int:
+                source = make_argus_camera_configured(c)
+            elif type(c) is str:
+                source = make_v4l2_cam_bin(c)
+            else:
+                raise TypeError(
+                    "camera_names elements must be 'str' type for v4l2 (e.g. '/dev/video0') or 'int' type for argus (0)"
+                )
+
+            sources.append(source)
+
+        # Override for debug
+        # sources = [
+        #     make_argus_camera_configured(0),
+        #     make_argus_camera_configured(1),
+        #     make_argus_camera_configured(2),
+        #     make_v4l2_cam_bin("/dev/video3"),
+        #     make_v4l2_cam_bin("/dev/video4")
+        # ]
 
         # Create muxer
         mux = _make_element_safe("nvstreammux")
         mux.set_property("live-source", 1)
         mux.set_property("width", 1920)
         mux.set_property("height", 1080)
-        mux.set_property("batch-size", len(sensor_id_list))
+        mux.set_property("batch-size", len(cameras))
         mux.set_property("batched-push-timeout", 4000000)
 
         # Create nvinfers
@@ -150,8 +162,10 @@ class MultiCamPipeline(Thread):
 
         sinks = []
         if save_h264:
-            ts = time.strftime('%Y-%m-%dT%H-%M-%S%z')
-            ecodebin = make_nvenc_bin(filepath=f"/home/nx/logs/videos/jetmulticam{ts}.mkv")
+            ts = time.strftime("%Y-%m-%dT%H-%M-%S%z")
+            ecodebin = make_nvenc_bin(
+                filepath=f"/home/nx/logs/videos/jetvision{ts}.mkv"
+            )
             sinks.append(ecodebin)
         if display:
             overlay = _make_element_safe("nvoverlaysink")
