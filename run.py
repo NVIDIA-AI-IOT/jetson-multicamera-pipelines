@@ -1,7 +1,7 @@
 import time
 
-from jetmulticam import MultiCamPipeline
-from jetmulticam.models import PeopleNet, DashCamNet
+from jetvision import MultiCamPipeline
+from jetvision.models import PeopleNet, DashCamNet
 
 if __name__ == "__main__":
 
