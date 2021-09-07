@@ -104,9 +104,11 @@ class MultiCamPipeline(Thread):
         # sources = [make_argus_camera_configured(idx) for idx in sensor_id_list]
 
         sources = [
+            make_argus_camera_configured(0),
+            make_argus_camera_configured(1),
+            make_argus_camera_configured(2),
             make_v4l2_cam_bin("/dev/video3"),
-            make_v4l2_cam_bin("/dev/video4"),
-            make_v4l2_cam_bin("/dev/video5")
+            make_v4l2_cam_bin("/dev/video4")
         ]
 
         # Create muxer
