@@ -5,7 +5,7 @@ from gi.repository import GObject, Gst
 from ..gstutils import _make_element_safe, _sanitize
 
 
-def make_nvenc_bin(filepath) -> Gst.Bin:
+def make_nvenc_bin(filepath, bitrate=int(20e6)) -> Gst.Bin:
     h264sink = Gst.Bin()
 
     # Create video converter
@@ -13,7 +13,7 @@ def make_nvenc_bin(filepath) -> Gst.Bin:
 
     # H264 encoder
     enc = _make_element_safe("nvv4l2h264enc")
-    enc.set_property("bitrate", int(20e6))
+    enc.set_property("bitrate", bitrate)
 
     # parser, mux
     parser = _make_element_safe("h264parse")
