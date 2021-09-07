@@ -39,9 +39,9 @@ class MultiCamPipeline(Thread):
         self._mainloop = GObject.MainLoop()
 
         # gst pipeline object
-        if type(models) == list:
+        if type(models) is list:
             self._p = self._create_pipeline_fully_connected(cameras, models, **kwargs)
-        elif type(models) == dict:
+        elif type(models) is dict:
             self._p = self._create_pipeline_sparsely_connected(cameras, models)
 
         self._bus = self._p.get_bus()
