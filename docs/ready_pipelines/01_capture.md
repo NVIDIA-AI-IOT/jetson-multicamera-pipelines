@@ -48,7 +48,16 @@ nvstreammux name=m width=1920 height=1080 batch-size=3 ! nvmultistreamtiler rows
 ## Display 2 USB cameras in tile stream
 ```shell
 gst-launch-1.0 \
-v4l2src device=/dev/video3 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! m.sink_0 \
-v4l2src device=/dev/video4 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! m.sink_1 \
+v4l2src device=/dev/video0 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! m.sink_0 \
+v4l2src device=/dev/video1 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! m.sink_1 \
 nvstreammux name=m width=1920 height=1080 batch-size=2 ! nvmultistreamtiler rows=2 columns=2 width=1920 height=1080 ! nvdsosd ! nvegltransform ! nveglglessink sync=0
+```
+
+## Display 3 USB cameras in tile stream
+```shell
+gst-launch-1.0 \
+v4l2src device=/dev/video0 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! m.sink_0 \
+v4l2src device=/dev/video1 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! m.sink_1 \
+v4l2src device=/dev/video2 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! nvvideoconvert ! "video/x-raw(memory:NVMM)" ! m.sink_2 \
+nvstreammux name=m width=1920 height=1080 batch-size=3 ! nvmultistreamtiler rows=2 columns=2 width=1920 height=1080 ! nvdsosd ! nvegltransform ! nveglglessink sync=0
 ```
