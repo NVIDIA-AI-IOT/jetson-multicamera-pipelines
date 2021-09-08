@@ -1,40 +1,17 @@
-# Multi Camera Robot
-
-
+# JetVision
 
 https://user-images.githubusercontent.com/26127866/131947398-59a12a95-82f6-4b48-8af7-34a325f0c0f4.mp4
 
-
-
-A multi-camera robot capable of:
-- 2 × HW accelerated DNN object detection on 3 camera streams @ 25fps
-<!-- - Autonomous navigation/path following using (another) DNN -->
-- Front- and Back- depth perception in real-time
-- HW accelerated video encoding and streaming
-
-All that is achieved at a budget of TBD % CPU core.
-
-
-## Installation and quickstart
-
-Install
-```bash
-git clone ssh://git@gitlab-master.nvidia.com:12051/tlewicki/multicamera-robot.git
-cd multicamera-robot
-bash install.sh
-source exports.sh
-```
-
-Run demo
-```
-python3 run.py
-```
-
 ## Quickstart
 
-### Instantiating the pipeline
+Install with:
+```shell
+pip3 install jetvision --with-ai=True
+```
+
+
 ```python
-from jetmulticam import MultiCamPipeline, models
+from jetvision import MultiCamPipeline, models
 import vehicle
 
 pipeline = MultiCamPipeline(
