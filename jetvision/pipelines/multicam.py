@@ -80,10 +80,6 @@ class MultiCamPipeline(Thread):
         while not self.running():
             time.sleep(0.1)
 
-    def wait_ready(self):
-        while not self.running():
-            time.sleep(0.1)
-
     def _create_pipeline_fully_connected(
         self,
         cameras,
