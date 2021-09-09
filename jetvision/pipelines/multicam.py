@@ -15,7 +15,7 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
 from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
-from .bins import make_nvenc_bin, make_argus_camera_configured, make_v4l2_cam_bin
+from .bins import make_nvenc_bin, make_argus_cam_bin, make_v4l2_cam_bin, make_argus_camera_configured
 
 
 class MultiCamPipeline(Thread):
@@ -102,7 +102,7 @@ class MultiCamPipeline(Thread):
         for c in cameras:
             # int -> argussrc
             if type(c) is int:
-                source = make_argus_camera_configured(c)
+                source = make_argus_cam_bin(c)
             elif type(c) is str:
                 source = make_v4l2_cam_bin(c)
             else:
@@ -178,7 +178,7 @@ class MultiCamPipeline(Thread):
             sinks.append(fakesink)
 
         # Add all elements to the pipeline
-        elements = [*sources, mux, *nvinfers, nvvidconv, nvosd, tiler, tee, *sinks]
+        elements = [*sources, mux, *nvinfers, nvvidconv, tiler, nvosd, tee, *sinks]
         for el in elements:
             pipeline.add(el)
 
@@ -219,19 +219,39 @@ class MultiCamPipeline(Thread):
 
         # Register callback on OSD sinkpad.
         # This way we get access to object detection results
-        osdsinkpad = nvosd.get_static_pad("sink")
-
-        if osdsinkpad is None:
-            raise Error  # TODO: narrow down
-
+        osdsinkpad = _sanitize(nvosd.get_static_pad("sink"))
         osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._osd_callback, 0)
 
+        sourcepad = _sanitize(sources[0].get_static_pad("src"))
+        sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._np_img_callback, 0)
+        
         return pipeline
+
+    def _np_img_callback(self, pad, info, u_data):
+        """
+        Callback responsible for extracting the numpy array from image
+        """
+        cb_start = time.perf_counter()
+
+        # Intiallizing object counter with 0.
+
+        gst_buffer = info.get_buffer()
+        if not gst_buffer:
+            logging.warn("_np._img_callback was unable to get GstBuffer. Dropping frame.")
+            return Gst.PadProbeReturn.DROP
+
+        # cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
+        img = pyds.get_nvds_buf_surface(hash(gst_buffer), 0)
+        print(img)
+
+        self._log.info(
+            f"Callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
+        )
+        return Gst.PadProbeReturn.OK
 
     def _osd_callback(self, pad, info, u_data):
         cb_start = time.perf_counter()
 
-        self._frame_n = 0
         # Intiallizing object counter with 0.
         self._detections = {
             PGIE_CLASS_ID_VEHICLE: 0,
@@ -261,7 +281,7 @@ class MultiCamPipeline(Thread):
 
                 # Store images
                 self.images[cam_id] = img[:, :, :3]  # RGBA->RGB
-                self.frame_n[cam_id] = frame_meta.frame_num
+                # self.frame_n[cam_id] = frame_meta.frame_num
 
             except StopIteration:
                 break
