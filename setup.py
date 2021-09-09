@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="jetvision",
-    version="0.0.1",
+    version="0.0.2",
     author="Tomasz Lewicki",
     author_email="tlewicki@nvidia.com",
     description="jetvision: Computer Vision package for Nvidia Jetson platform",
@@ -18,9 +18,8 @@ setuptools.setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: JetPack 4.5 or higher",
     ],
     package_dir={"": "jetvision"},
-    packages=setuptools.find_packages(where="jetvision"),
+    packages=setuptools.find_packages(where=""),
     python_requires=">=3.6",
 )
