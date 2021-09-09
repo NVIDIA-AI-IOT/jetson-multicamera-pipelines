@@ -229,7 +229,7 @@ class MultiCamPipeline(Thread):
         return pipeline
 
     def _osd_callback(self, pad, info, u_data):
-        start = time.perf_counter()
+        cb_start = time.perf_counter()
 
         self._frame_n = 0
         # Intiallizing object counter with 0.
@@ -260,8 +260,7 @@ class MultiCamPipeline(Thread):
                 img = pyds.get_nvds_buf_surface(hash(gst_buffer), cam_id)
 
                 # Store images
-                # self.images[cam_id] = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
-                self.images[cam_id] = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+                self.images[cam_id] = img[:, :, :3]  # RGBA->RGB
                 self.frame_n[cam_id] = frame_meta.frame_num
 
             except StopIteration:
