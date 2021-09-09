@@ -48,6 +48,8 @@ class MultiCamPipeline(Thread):
         self._bus.add_signal_watch()
         self._bus.connect("message", bus_call, self._mainloop)
 
+        self._log = logging.getLogger("jetvision")
+
         # Runtime parameters
         N_CLASSES = 4
         N_CAMS = max(cameras) + 1
@@ -318,7 +320,9 @@ class MultiCamPipeline(Thread):
             except StopIteration:
                 break
 
-        # print(f"Callback took {1000 * (time.perf_counter() - start)} ms")
+        self._log.info(
+            f"Callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
+        )
         return Gst.PadProbeReturn.OK
 
 
