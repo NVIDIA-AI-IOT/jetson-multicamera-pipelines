@@ -6,7 +6,8 @@ https://user-images.githubusercontent.com/26127866/131947398-59a12a95-82f6-4b48-
 
 Install with:
 ```shell
-pip3 install jetvision --with-ai=True
+bash install-dependencies.sh --with-ds
+pip3 install jetvision
 ```
 
 
@@ -91,9 +92,9 @@ Ready pipelines for specific multicamera usecase deployable via `gst-launch-1.0`
 - [x] Add programatic support for multiple models
 - [ ] Add the diagram of the underlying gstreamer pipeline
 - [x] Pano stitcher demo
-- [ ] Robot demo in Endeavor
-- [ ] `install.sh` -> `setup.py` for easier pip3 install
-
+- [x] Robot demo in Endeavor
+- [x] `install.sh` -> `setup.py` for easier pip3 install
+- [ ] `MultiCamPipeline` and `CameraPipeline` could have the same base class for code re-use
 
  gst-launch-1.0 -v udpsrc port=5000 ! \
  "application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! \
