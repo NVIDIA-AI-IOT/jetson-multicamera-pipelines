@@ -41,7 +41,7 @@ def make_nvenc_bin(filepath, bitrate=int(20e6)) -> Gst.Bin:
     return h264sink
 
 
-def make_argus_camera_configured(sensor_id) -> Gst.Bin:
+def make_argus_camera_configured(sensor_id) -> Gst.Element:
     """
     Make pre-configured camera source, so we have consistent setting across sensors
     Switch off defaults which are not helpful for machine vision like edge-enhancement
@@ -55,6 +55,33 @@ def make_argus_camera_configured(sensor_id) -> Gst.Bin:
     cam.set_property("ee-mode", 0)
 
     return cam
+
+
+def make_argus_cam_bin(sensor_id) -> Gst.Bin:
+    bin = Gst.Bin()
+
+    # Create v4l2 camera
+    src = make_argus_camera_configured(sensor_id)
+    conv = _make_element_safe("nvvideoconvert")
+    conv_cf = _make_element_safe("capsfilter")
+    conv_cf.set_property(
+        "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM),format=(string)RGBA")
+    )
+
+    # Add elements to bin before linking
+    for el in [src, conv, conv_cf]:
+        bin.add(el)
+
+    # Link bin elements
+    src.link(conv)
+    conv.link(conv_cf)
+
+    # We exit via nvvidconv source pad
+    exit_pad = _sanitize(conv_cf.get_static_pad("src"))
+    gp = Gst.GhostPad.new(name="src", target=exit_pad)
+    bin.add_pad(gp)
+
+    return bin
 
 
 def make_v4l2_cam_bin(dev="/dev/video3") -> Gst.Bin:
