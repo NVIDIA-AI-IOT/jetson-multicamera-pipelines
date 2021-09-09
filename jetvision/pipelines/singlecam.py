@@ -14,7 +14,12 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
 from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
-from .bins import make_nvenc_bin, make_argus_camera_configured, make_v4l2_cam_bin
+from .bins import make_nvenc_bin, make_argus_camera_configured, make_v4l2_cam_bin, make_argus_cam_bin
+
+def on_buffer():
+    print("test")
+
+    return Gst.FlowReturn.OK
 
 
 class CameraPipeline(Thread):
@@ -52,7 +57,7 @@ class CameraPipeline(Thread):
     def _make_singlecam_pipeline(self, camera, filepath=None):
 
         pipeline = _sanitize(Gst.Pipeline())
-        cam = make_argus_camera_configured(camera)
+        cam = make_argus_cam_bin(camera)
         tee = _make_element_safe("tee")
         h264sink = make_nvenc_bin(f"/home/nx/logs/videos/jetvision-singlecam.mkv")
         
@@ -60,10 +65,13 @@ class CameraPipeline(Thread):
         nvvidconv_cf = _make_element_safe("capsfilter")
         # Ensure we output something nvvideoconvert has caps for
         nvvidconv_cf.set_property(
-            "caps", Gst.Caps.from_string("video/x-raw, format=(string)RGBA")
+            "caps", Gst.Caps.from_string("video/x-raw, format=(string)BGRx")
         )
 
         self._appsink = appsink = _make_element_safe("appsink")
+        appsink.set_property('max-buffers', 1)
+        appsink.set_property('drop', True)
+        appsink.connect("new-sample", on_buffer, None)
 
         for el in [cam, tee, h264sink, appsink, nvvidconv, nvvidconv_cf]:
             pipeline.add(el)
@@ -94,7 +102,7 @@ class CameraPipeline(Thread):
         sample = self._appsink.emit("pull-sample")
         buf = sample.get_buffer()
         # (result, mapinfo) = buf.map(Gst.MapFlags.READ)
-        # buf2 = buf.extract_dup(0, buf.get_size())
+        buf2 = buf.extract_dup(0, buf.get_size())
         # arr = np.frombuffer(buf2)
 
         print(buf.pts, buf.dts, buf.offset)
@@ -108,10 +116,8 @@ class CameraPipeline(Thread):
         c = 4
 
         buf_size = buf.get_size()
-        print(buf_size)
-        arr = np.ndarray(
-            shape=(h,w,c), buffer=buf.extract_dup(0, buf_size), dtype=np.uint8
-        )
+
+        arr = np.ndarray(shape=(h,w,c), buffer=buf2, dtype=np.uint8)
 
         return arr
 
