@@ -55,13 +55,20 @@ class CameraPipeline(Thread):
         cam = make_argus_camera_configured(camera)
         tee = _make_element_safe("tee")
         h264sink = make_nvenc_bin(f"/home/nx/logs/videos/jetvision-singlecam.mkv")
+        
+        nvvidconv = _make_element_safe("nvvideoconvert")
+        nvvidconv_cf = _make_element_safe("capsfilter")
+        # Ensure we output something nvvideoconvert has caps for
+        nvvidconv_cf.set_property(
+            "caps", Gst.Caps.from_string("video/x-raw, format=(string)RGBA")
+        )
 
         self._appsink = appsink = _make_element_safe("appsink")
 
-        for el in [cam, tee, h264sink, appsink]:
+        for el in [cam, tee, h264sink, appsink, nvvidconv, nvvidconv_cf]:
             pipeline.add(el)
 
-        sinks = [h264sink, appsink]
+        sinks = [h264sink, nvvidconv]
 
         for idx, sink in enumerate(sinks):
             # Use queues for each sink. This ensures the sinks can execute in separate threads
@@ -75,6 +82,9 @@ class CameraPipeline(Thread):
             srcpad.link(sinkpad)
             # queue -> sink
             queue.link(sink)
+        
+        nvvidconv.link(nvvidconv_cf)
+        nvvidconv_cf.link(appsink)
 
         cam.link(tee)
 
@@ -95,12 +105,12 @@ class CameraPipeline(Thread):
         # GstVideo.VideoFormat
 
         w, h = caps_format.get_value("width"), caps_format.get_value("height")
-        c = 2
+        c = 4
 
         buf_size = buf.get_size()
-        shape = (h, w, c) if (h * w * c == buf_size) else buf_size
+        print(buf_size)
         arr = np.ndarray(
-            shape=shape, buffer=buf.extract_dup(0, buf_size), dtype=np.uint8
+            shape=(h,w,c), buffer=buf.extract_dup(0, buf_size), dtype=np.uint8
         )
 
         return arr
