@@ -10,7 +10,7 @@ build_gst_python()
 	./autogen.sh PYTHON=python3;
 	./configure PYTHON=python3;
 	make -j$(nproc);
-	sudo make install;
+	sudo make install; # TODO: is sudo necessary?
 }
 
 build_ds_bindings()
