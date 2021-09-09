@@ -178,10 +178,11 @@ cython_debug/
 *.pt # pytorch weights
 remap_rectify_params.yml # Stereo rectify parameters
 
-# configs for nvinfer
-models/peoplenet/tlt_peoplenet_pruned_v2.0/
-jetmulticam/models/peoplenet/tlt_peoplenet_pruned_v2.0/
-
 # video files
 *.h264
 *.mkv
+
+# Deepstream + TRT
+*.txt
+*.etlt
+*.engine
