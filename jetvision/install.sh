@@ -22,9 +22,10 @@ build_ds_bindings()
 
 download_models()
 {
-    cd models/;
-    wget --content-disposition https://api.ngc.nvidia.com/v2/models/nvidia/tlt_peoplenet/versions/pruned_v2.0/zip -O /tmp/tlt_peoplenet_pruned_v2.0.zip;
-    unzip /tmp/tlt_peoplenet_pruned_v2.0.zip -d peoplenet/tlt_peoplenet_pruned_v2.0
+    MODEL_DIR=$HOME/.jetvision-files/models;
+	mkdir -p $MODEL_DIR/peoplenet;
+    wget --content-disposition https://api.ngc.nvidia.com/v2/models/nvidia/tlt_peoplenet/versions/pruned_v2.0/zip -O /tmp/tlt_peoplenet_pruned_v2.0.zip -o /dev/null;
+    unzip /tmp/tlt_peoplenet_pruned_v2.0.zip -d $MODEL_DIR/peoplenet/tlt_peoplenet_pruned_v2.0
 }
 
 echo "Installing..."
