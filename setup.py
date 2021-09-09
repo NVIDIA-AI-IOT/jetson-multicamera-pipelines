@@ -19,7 +19,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
     ],
-    package_dir={"": "jetvision"},
+    package_dir={"jetvision": "jetvision"},
     packages=setuptools.find_packages(where=""),
     python_requires=">=3.6",
     install_requires=[
