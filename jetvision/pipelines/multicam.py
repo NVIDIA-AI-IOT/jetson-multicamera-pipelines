@@ -4,8 +4,6 @@ import os
 import time
 from threading import Thread
 
-import cv2
-
 # Gstreamer imports
 import gi
 import numpy as np
