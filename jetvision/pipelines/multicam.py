@@ -247,7 +247,7 @@ class CameraPipelineDNN(Thread):
 
         # cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
         img = pyds.get_nvds_buf_surface(hash(gst_buffer), 0)
-        print(img)
+        # print(img)
 
         self._log.info(
             f"Callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
@@ -296,6 +296,11 @@ class CameraPipelineDNN(Thread):
             while l_obj is not None:
                 try:
                     obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
+                    print(dir(obj_meta.rect_params))
+                    l, w = obj_meta.rect_params.left, obj_meta.rect_params.width
+                    t, h = obj_meta.rect_params.top, obj_meta.rect_params.height
+                    # This is in image frame: 1092.7200927734375 93.68058776855469 248.01895141601562 106.38716125488281
+                    print(l, w, t, h)
                 except StopIteration:
                     break
 
