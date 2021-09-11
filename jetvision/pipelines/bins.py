@@ -56,6 +56,7 @@ def make_argus_camera_configured(sensor_id) -> Gst.Element:
 
     return cam
 
+
 def make_argus_cam_bin(sensor_id) -> Gst.Bin:
     bin = Gst.Bin()
 
@@ -63,7 +64,9 @@ def make_argus_cam_bin(sensor_id) -> Gst.Bin:
     src = make_argus_camera_configured(sensor_id)
     conv = _make_element_safe("nvvideoconvert")
     conv_cf = _make_element_safe("capsfilter")
-    conv_cf.set_property("caps", Gst.Caps.from_string("video/x-raw(memory:NVMM),format=(string)RGBA"))
+    conv_cf.set_property(
+        "caps", Gst.Caps.from_string("video/x-raw(memory:NVMM),format=(string)RGBA")
+    )
 
     # Add elements to bin before linking
     for el in [src, conv, conv_cf]:
@@ -79,6 +82,7 @@ def make_argus_cam_bin(sensor_id) -> Gst.Bin:
     bin.add_pad(gp)
 
     return bin
+
 
 def make_v4l2_cam_bin(dev="/dev/video3") -> Gst.Bin:
     bin = Gst.Bin()

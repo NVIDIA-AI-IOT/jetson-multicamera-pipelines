@@ -12,7 +12,13 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
 from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
-from .bins import make_nvenc_bin, make_argus_camera_configured, make_v4l2_cam_bin, make_argus_cam_bin
+from .bins import (
+    make_nvenc_bin,
+    make_argus_camera_configured,
+    make_v4l2_cam_bin,
+    make_argus_cam_bin,
+)
+
 
 def on_buffer():
     print("test")
@@ -58,7 +64,7 @@ class CameraPipeline(Thread):
         cam = make_argus_cam_bin(camera)
         tee = _make_element_safe("tee")
         h264sink = make_nvenc_bin(f"/home/nx/logs/videos/jetvision-singlecam.mkv")
-        
+
         nvvidconv = _make_element_safe("nvvideoconvert")
         nvvidconv_cf = _make_element_safe("capsfilter")
         # Ensure we output something nvvideoconvert has caps for
@@ -67,8 +73,8 @@ class CameraPipeline(Thread):
         )
 
         self._appsink = appsink = _make_element_safe("appsink")
-        appsink.set_property('max-buffers', 1)
-        appsink.set_property('drop', True)
+        appsink.set_property("max-buffers", 1)
+        appsink.set_property("drop", True)
         appsink.connect("new-sample", on_buffer, None)
 
         for el in [cam, tee, h264sink, appsink, nvvidconv, nvvidconv_cf]:
@@ -88,7 +94,7 @@ class CameraPipeline(Thread):
             srcpad.link(sinkpad)
             # queue -> sink
             queue.link(sink)
-        
+
         nvvidconv.link(nvvidconv_cf)
         nvvidconv_cf.link(appsink)
 
@@ -115,7 +121,7 @@ class CameraPipeline(Thread):
 
         buf_size = buf.get_size()
 
-        arr = np.ndarray(shape=(h,w,c), buffer=buf2, dtype=np.uint8)
+        arr = np.ndarray(shape=(h, w, c), buffer=buf2, dtype=np.uint8)
 
         return arr
 

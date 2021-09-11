@@ -13,7 +13,12 @@ gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
 from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
-from .bins import make_nvenc_bin, make_argus_cam_bin, make_v4l2_cam_bin, make_argus_camera_configured
+from .bins import (
+    make_nvenc_bin,
+    make_argus_cam_bin,
+    make_v4l2_cam_bin,
+    make_argus_camera_configured,
+)
 
 
 class CameraPipelineDNN(Thread):
@@ -222,7 +227,7 @@ class CameraPipelineDNN(Thread):
 
         sourcepad = _sanitize(sources[0].get_static_pad("src"))
         sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._np_img_callback, 0)
-        
+
         return pipeline
 
     def _np_img_callback(self, pad, info, u_data):
@@ -235,7 +240,9 @@ class CameraPipelineDNN(Thread):
 
         gst_buffer = info.get_buffer()
         if not gst_buffer:
-            logging.warn("_np._img_callback was unable to get GstBuffer. Dropping frame.")
+            logging.warn(
+                "_np._img_callback was unable to get GstBuffer. Dropping frame."
+            )
             return Gst.PadProbeReturn.DROP
 
         # cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
