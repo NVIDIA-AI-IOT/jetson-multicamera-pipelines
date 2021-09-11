@@ -1,12 +1,12 @@
 import time
 
-from jetvision import MultiCamPipeline
+from jetvision import CameraPipelineDNN
 from jetvision.models import PeopleNet, DashCamNet
 
 if __name__ == "__main__":
 
-    pipeline = MultiCamPipeline(
-        cameras=[2, 0, 1],
+    pipeline = CameraPipelineDNN(
+        cameras=[2, 5, 8],
         models=[
             PeopleNet.DLA1,
             PeopleNet.DLA0

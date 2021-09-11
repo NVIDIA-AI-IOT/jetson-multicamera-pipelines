@@ -16,7 +16,7 @@ from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
 from .bins import make_nvenc_bin, make_argus_cam_bin, make_v4l2_cam_bin, make_argus_camera_configured
 
 
-class MultiCamPipeline(Thread):
+class CameraPipelineDNN(Thread):
     def __init__(self, cameras, models, *args, **kwargs):
         """
         models parameter can be:
@@ -347,7 +347,7 @@ PGIE_CLASS_ID_ROADSIGN = 3
 
 if __name__ == "__main__":
 
-    pipeline = MultiCamPipeline(n_cams=3)
+    pipeline = CameraPipelineDNN(n_cams=3)
     pipeline.start()
 
     while not pipeline.running():
