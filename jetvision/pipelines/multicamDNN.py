@@ -20,8 +20,9 @@ from .bins import (
     make_argus_camera_configured,
 )
 
+from .basepipeline import BasePipeline
 
-class CameraPipelineDNN(Thread):
+class CameraPipelineDNN(BasePipeline):
     def __init__(self, cameras, models, *args, **kwargs):
         """
         models parameter can be:
@@ -29,29 +30,9 @@ class CameraPipelineDNN(Thread):
         - `list`: list of models to use on frames from all cameras
         """
 
-        super().__init__()
+        self._m = models
+        self._c = cameras
 
-        # Gstreamer init
-        GObject.threads_init()
-        Gst.init(None)
-
-        save_h264_path = "/home/nx/logs/videos"
-        os.makedirs(save_h264_path, exist_ok=True)
-
-        # create an event loop and feed gstreamer bus mesages to it
-        self._mainloop = GObject.MainLoop()
-
-        # gst pipeline object
-        if type(models) is list:
-            self._p = self._create_pipeline_fully_connected(cameras, models, **kwargs)
-        elif type(models) is dict:
-            self._p = self._create_pipeline_sparsely_connected(cameras, models)
-
-        self._bus = self._p.get_bus()
-        self._bus.add_signal_watch()
-        self._bus.connect("message", bus_call, self._mainloop)
-
-        self._log = logging.getLogger("jetvision")
 
         # Runtime parameters
         N_CLASSES = 4
@@ -59,29 +40,17 @@ class CameraPipelineDNN(Thread):
         self.images = [None for _ in range(0, N_CAMS)]
         self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, N_CAMS)]
         self.frame_n = [0 for _ in range(0, N_CAMS)]
+        
+        super().__init__()
 
-    def run(self):
-        # start play back and listen to events
-        print("Starting pipeline...")
+    def _create_pipeline(self):
+        # gst pipeline object
+        if type(self._m) is list:
+            p = self._create_pipeline_fully_connected(self._c, self._m)
+        elif type(self._m) is dict:
+            p = self._create_pipeline_sparsely_connected(self._c, self._m)
 
-        self._p.set_state(Gst.State.PLAYING)
-        try:
-            self._mainloop.run()
-        except KeyboardInterrupt as e:
-            print(e)
-        finally:
-            self._p.set_state(Gst.State.NULL)
-
-    def stop(self):
-        self._p.set_state(Gst.State.NULL)
-
-    def running(self):
-        _, state, _ = self._p.get_state(1)
-        return True if state == Gst.State.PLAYING else False
-
-    def wait_ready(self):
-        while not self.running():
-            time.sleep(0.1)
+        return p
 
     def _create_pipeline_fully_connected(
         self,
@@ -223,7 +192,7 @@ class CameraPipelineDNN(Thread):
         # Register callback on OSD sinkpad.
         # This way we get access to object detection results
         osdsinkpad = _sanitize(nvosd.get_static_pad("sink"))
-        osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._osd_callback, 0)
+        osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._det_parse_callback, 0)
 
         sourcepad = _sanitize(sources[0].get_static_pad("src"))
         sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._np_img_callback, 0)
@@ -254,8 +223,13 @@ class CameraPipelineDNN(Thread):
         )
         return Gst.PadProbeReturn.OK
 
-    def _osd_callback(self, pad, info, u_data):
+    def _det_parse_callback(self, pad, info, u_data):
         cb_start = time.perf_counter()
+
+        PGIE_CLASS_ID_VEHICLE = 0
+        PGIE_CLASS_ID_PERSON = 1
+        PGIE_CLASS_ID_BICYCLE = 2
+        PGIE_CLASS_ID_ROADSIGN = 3
 
         # Intiallizing object counter with 0.
         self._detections = {
@@ -296,11 +270,11 @@ class CameraPipelineDNN(Thread):
             while l_obj is not None:
                 try:
                     obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
-                    print(dir(obj_meta.rect_params))
+                    # print(dir(obj_meta.rect_params))
                     l, w = obj_meta.rect_params.left, obj_meta.rect_params.width
                     t, h = obj_meta.rect_params.top, obj_meta.rect_params.height
                     # This is in image frame: 1092.7200927734375 93.68058776855469 248.01895141601562 106.38716125488281
-                    print(l, w, t, h)
+                    self._log.debug(f"Detected object: {l, w, t, h}")
                 except StopIteration:
                     break
 
@@ -346,15 +320,10 @@ class CameraPipelineDNN(Thread):
                 break
 
         self._log.info(
-            f"Callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
+            f"Detection parsing callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
         )
         return Gst.PadProbeReturn.OK
 
-
-PGIE_CLASS_ID_VEHICLE = 0
-PGIE_CLASS_ID_BICYCLE = 1
-PGIE_CLASS_ID_PERSON = 2
-PGIE_CLASS_ID_ROADSIGN = 3
 
 
 if __name__ == "__main__":
