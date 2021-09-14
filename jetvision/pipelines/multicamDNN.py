@@ -215,14 +215,10 @@ class CameraPipelineDNN(BasePipeline):
             )
             return Gst.PadProbeReturn.DROP
 
-        print(pad.get_name())
-        # print(pad)
-        # print(info)
-
-        # cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
         buff_ptr = hash(gst_buffer)  # Memory address of gst_buffer
         idx = u_data['image_idx']
-        self.images[idx] = pyds.get_nvds_buf_surface(buff_ptr, 0)
+        img = pyds.get_nvds_buf_surface(buff_ptr, 0)
+        self.images[idx] = img[:, :, :3]  # RGBA->RGB
 
         self._log.info(
             f"Image ingest callback for image {idx} took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
@@ -231,22 +227,7 @@ class CameraPipelineDNN(BasePipeline):
 
     def _parse_dets_callback(self, pad, info, u_data):
         cb_start = time.perf_counter()
-
-        PGIE_CLASS_ID_VEHICLE = 0
-        PGIE_CLASS_ID_PERSON = 1
-        PGIE_CLASS_ID_BICYCLE = 2
-        PGIE_CLASS_ID_ROADSIGN = 3
-
-        # Intiallizing object counter with 0.
-        self._detections = {
-            PGIE_CLASS_ID_VEHICLE: 0,
-            PGIE_CLASS_ID_PERSON: 0,
-            PGIE_CLASS_ID_BICYCLE: 0,
-            PGIE_CLASS_ID_ROADSIGN: 0,
-        }
-
-        num_rects = 0
-
+        
         gst_buffer = info.get_buffer()
         if not gst_buffer:
             logging.error("Detection callback unable to get GstBuffer ")
@@ -256,17 +237,15 @@ class CameraPipelineDNN(BasePipeline):
         batch_meta = pyds.gst_buffer_get_nvds_batch_meta(buff_ptr)
 
         # Iterate frames in a batch
+        # TODO: for loop
         l_frame = batch_meta.frame_meta_list
         while l_frame is not None:
+
+            detections = []
             try:
                 frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
                 cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
-                img = pyds.get_nvds_buf_surface(hash(gst_buffer), cam_id)
-
-                # Store images
-                self.images[cam_id] = img[:, :, :3]  # RGBA->RGB
                 # self.frame_n[cam_id] = frame_meta.frame_num
-
             except StopIteration:
                 break
 
@@ -275,21 +254,37 @@ class CameraPipelineDNN(BasePipeline):
             while l_obj is not None:
                 try:
                     obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
-                    # print(dir(obj_meta.rect_params))
+
+                    # This is all in image frame, e.g.: 1092.7200927734375 93.68058776855469 248.01895141601562 106.38716125488281
                     l, w = obj_meta.rect_params.left, obj_meta.rect_params.width
                     t, h = obj_meta.rect_params.top, obj_meta.rect_params.height
-                    # This is in image frame: 1092.7200927734375 93.68058776855469 248.01895141601562 106.38716125488281
-                    self._log.debug(f"Detected object: {l, w, t, h}")
+
+                    position = (l, w, t, h)
+                    cls_id = obj_meta.class_id
+
+                    class2name ={
+                        0: 'person',
+                        1: 'bag',
+                        2: 'face'
+                    }
+                    name = class2name[cls_id]
+
+                    detections.append({
+                        'class': name,
+                        'position': position
+                        })
+
+                    obj_meta.rect_params.border_color.set(0.0, 1.0, 0.0, 0.0)
+
                 except StopIteration:
                     break
-
-                self.detections[cam_id][obj_meta.class_id] += 1
-                obj_meta.rect_params.border_color.set(0.0, 0.0, 1.0, 0.0)
 
                 try:
                     l_obj = l_obj.next
                 except StopIteration:
                     break
+
+            self.detections[cam_id] = detections
 
             # display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
             # display_meta.num_labels = 1
