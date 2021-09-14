@@ -192,17 +192,17 @@ class CameraPipelineDNN(BasePipeline):
         # Register callback on OSD sinkpad.
         # This way we get access to object detection results
         osdsinkpad = _sanitize(nvosd.get_static_pad("sink"))
-        osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._det_parse_callback, 0)
+        osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._parse_dets_callback, 0)
 
 
         for idx, source in enumerate(sources):
             sourcepad = _sanitize(source.get_static_pad("src"))
             cb_args =  {'image_idx': idx}
-            sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._np_img_callback, cb_args)
+            sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._get_np_img_callback, cb_args)
 
         return pipeline
 
-    def _np_img_callback(self, pad, info, u_data):
+    def _get_np_img_callback(self, pad, info, u_data):
         """
         Callback responsible for extracting the numpy array from image
         """
@@ -229,7 +229,7 @@ class CameraPipelineDNN(BasePipeline):
         )
         return Gst.PadProbeReturn.OK
 
-    def _det_parse_callback(self, pad, info, u_data):
+    def _parse_dets_callback(self, pad, info, u_data):
         cb_start = time.perf_counter()
 
         PGIE_CLASS_ID_VEHICLE = 0
