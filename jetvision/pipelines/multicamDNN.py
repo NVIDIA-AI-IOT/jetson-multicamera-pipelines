@@ -154,7 +154,7 @@ class CameraPipelineDNN(BasePipeline):
         for el in elements:
             pipeline.add(el)
 
-        for idx, source in enumerate(sources):
+        for (idx, source) in enumerate(sources):
             srcpad_or_none = source.get_static_pad(f"src")
             sinkpad_or_none = mux.get_request_pad(f"sink_{idx}")
             srcpad = _sanitize(srcpad_or_none)
@@ -194,8 +194,11 @@ class CameraPipelineDNN(BasePipeline):
         osdsinkpad = _sanitize(nvosd.get_static_pad("sink"))
         osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._det_parse_callback, 0)
 
-        sourcepad = _sanitize(sources[0].get_static_pad("src"))
-        sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._np_img_callback, 0)
+
+        for idx, source in enumerate(sources):
+            sourcepad = _sanitize(source.get_static_pad("src"))
+            cb_args =  {'image_idx': idx}
+            sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._np_img_callback, cb_args)
 
         return pipeline
 
@@ -205,8 +208,6 @@ class CameraPipelineDNN(BasePipeline):
         """
         cb_start = time.perf_counter()
 
-        # Intiallizing object counter with 0.
-
         gst_buffer = info.get_buffer()
         if not gst_buffer:
             logging.warn(
@@ -214,12 +215,17 @@ class CameraPipelineDNN(BasePipeline):
             )
             return Gst.PadProbeReturn.DROP
 
+        print(pad.get_name())
+        # print(pad)
+        # print(info)
+
         # cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
-        img = pyds.get_nvds_buf_surface(hash(gst_buffer), 0)
-        # print(img)
+        buff_ptr = hash(gst_buffer)  # Memory address of gst_buffer
+        idx = u_data['image_idx']
+        self.images[idx] = pyds.get_nvds_buf_surface(buff_ptr, 0)
 
         self._log.info(
-            f"Callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
+            f"Image ingest callback for image {idx} took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
         )
         return Gst.PadProbeReturn.OK
 
@@ -243,8 +249,7 @@ class CameraPipelineDNN(BasePipeline):
 
         gst_buffer = info.get_buffer()
         if not gst_buffer:
-            # TODO: logging.error
-            print("Unable to get GstBuffer ")
+            logging.error("Detection callback unable to get GstBuffer ")
             return Gst.PadProbeReturn.DROP
 
         buff_ptr = hash(gst_buffer)  # Memory address of gst_buffer
@@ -336,7 +341,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            print(pipeline.images[0].shape)
+            print(pipeline.images[2].shape)
             print(pipeline.detections[0])
             time.sleep(1)
     except KeyboardInterrupt:

@@ -78,7 +78,7 @@ def make_argus_cam_bin(sensor_id) -> Gst.Bin:
 
     # We exit via nvvidconv source pad
     exit_pad = _sanitize(conv_cf.get_static_pad("src"))
-    gp = Gst.GhostPad.new(name="src", target=exit_pad)
+    gp = _sanitize(Gst.GhostPad.new(name="src", target=exit_pad))
     bin.add_pad(gp)
 
     return bin
