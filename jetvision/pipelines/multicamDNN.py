@@ -51,8 +51,8 @@ class CameraPipelineDNN(BasePipeline):
         self,
         cameras,
         model_list,
-        save_h264=True,
-        save_h264_path="/home/nx/logs/videos",
+        save_video=True,
+        save_video_folder="/home/nx/logs/videos",
         display=True,
         streaming=False,
     ):
