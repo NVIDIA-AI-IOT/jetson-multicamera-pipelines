@@ -12,10 +12,7 @@ from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
 
 
 class BasePipeline(Thread):
-    def __init__():
-        pass
-
-    def __init__(self):
+    def __init__(self, **kwargs):
 
         super().__init__()
 
@@ -26,7 +23,7 @@ class BasePipeline(Thread):
         # create an event loop and feed gstreamer bus mesages to it
         self._mainloop = GObject.MainLoop()
 
-        self._p = self._create_pipeline()
+        self._p = self._create_pipeline(**kwargs)
         self._log = logging.getLogger("jetvision")
 
         self._bus = self._p.get_bus()
