@@ -6,8 +6,10 @@ https://user-images.githubusercontent.com/26127866/131947398-59a12a95-82f6-4b48-
 
 Install with:
 ```shell
-bash install-dependencies.sh --with-ds
-pip3 install jetvision
+git clone https://github.com/tomek-l/nv-jetvision.git
+cd nv-jetvision
+bash install-dependencies.sh
+pip3 install .
 ```
 
 
