@@ -52,6 +52,29 @@ class CameraPipelineDNN(BasePipeline):
 
         return p
 
+    @staticmethod
+    def _make_sources(cameras: list) -> list:
+        # Create pre-configured sources with appropriate type: argus or v4l
+        sources = []
+        for c in cameras:
+            # int -> bin with arguscamerasrc (e.g. 0)
+            # str -> bin with nv4l2src (e.g. '/dev/video0)
+            if type(c) is int:
+                source = make_argus_cam_bin(c)
+            elif type(c) is str:
+                source = make_v4l2_cam_bin(c)
+            else:
+                raise TypeError(
+                    f"Error parsing 'cameras' argument. Valid cameras must be either:\n\
+                    1) 'str' type for v4l2 (e.g. '/dev/video0')\n\
+                    2) 'int' type for argus (0)\n\
+                    Got '{type(c)}'"
+                )
+
+            sources.append(source)
+
+        return sources
+
     def _create_pipeline_fully_connected(
         self,
         cameras,
@@ -68,21 +91,7 @@ class CameraPipelineDNN(BasePipeline):
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
 
-        # Create pre-configured sources
-        sources = []
-
-        for c in cameras:
-            # int -> argussrc
-            if type(c) is int:
-                source = make_argus_cam_bin(c)
-            elif type(c) is str:
-                source = make_v4l2_cam_bin(c)
-            else:
-                raise TypeError(
-                    "camera_names elements must be 'str' type for v4l2 (e.g. '/dev/video0') or 'int' type for argus (0)"
-                )
-
-            sources.append(source)
+        sources = self._make_sources(cameras)
 
         # Override for debug
         # sources = [
