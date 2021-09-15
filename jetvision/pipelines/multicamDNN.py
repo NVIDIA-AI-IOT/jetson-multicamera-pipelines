@@ -1,6 +1,5 @@
 import logging
 import time
-from threading import Thread
 
 # Gstreamer imports
 import gi
@@ -8,14 +7,13 @@ import numpy as np
 import pyds
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GObject, Gst
+from gi.repository import  Gst
 
 from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
 from .bins import (
     make_nvenc_bin,
     make_argus_cam_bin,
     make_v4l2_cam_bin,
-    make_argus_camera_configured,
 )
 
 from .basepipeline import BasePipeline
