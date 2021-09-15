@@ -66,15 +66,6 @@ class CameraPipelineDNN(BasePipeline):
 
         sources = self._make_sources(cameras)
 
-        # Override for debug
-        # sources = [
-        #     make_argus_camera_configured(0),
-        #     make_argus_camera_configured(1),
-        #     make_argus_camera_configured(2),
-        #     make_v4l2_cam_bin("/dev/video3"),
-        #     make_v4l2_cam_bin("/dev/video4")
-        # ]
-
         # Create muxer
         mux = _make_element_safe("nvstreammux")
         mux.set_property("live-source", 1)
@@ -88,6 +79,7 @@ class CameraPipelineDNN(BasePipeline):
         for m_path, nvinf in zip(model_list, nvinfers):
             nvinf.set_property("config-file-path", m_path)
             nvinf.set_property("batch-size", 3)
+            # TODO: expose this
             # nvinf.set_property("interval", 5) # to infer every n batches
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
@@ -99,9 +91,6 @@ class CameraPipelineDNN(BasePipeline):
         tiler.set_property("columns", 3)
         # Encoder crashes when we attempt encoding 5760 x 1080, so we set it lower
         # TODO: Is that a bug, or hw limitation?
-
-        # tiler.set_property("width", 2 * 1920)
-        # tiler.set_property("height", 720)
 
         tiler.set_property("width", 1920)
         tiler.set_property("height", 360)
@@ -115,19 +104,20 @@ class CameraPipelineDNN(BasePipeline):
         sinks = []
         if save_h264:
             ts = time.strftime("%Y-%m-%dT%H-%M-%S%z")
-            ecodebin = make_nvenc_bin(
-                filepath=f"/home/nx/logs/videos/jetvision{ts}.mkv"
+            encodebin = make_nvenc_bin(
+                filepath=save_h264_path+f"jetvision{ts}.mkv"
             )
-            sinks.append(ecodebin)
+            sinks.append(encodebin)
         if display:
             overlay = _make_element_safe("nvoverlaysink")
             overlay.set_property("sync", 0)  # crucial for performance of the pipeline
             sinks.append(overlay)
         if streaming:
+            # TODO:
             raise NotImplementedError
 
         if len(sinks) == 0:
-            # If no other sinks are added we erminate with fakesink
+            # If no other sinks are added we terminate with fakesink
             fakesink = _make_element_safe("fakesink")
             sinks.append(fakesink)
 
