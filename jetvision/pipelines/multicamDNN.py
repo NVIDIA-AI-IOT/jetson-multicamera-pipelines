@@ -242,54 +242,40 @@ class CameraPipelineDNN(BasePipeline):
         while l_frame is not None:
 
             detections = []
-            try:
-                frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
-                cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
-                # self.frame_n[cam_id] = frame_meta.frame_num
-            except StopIteration:
-                break
+            frame_meta = pyds.NvDsFrameMeta.cast(l_frame.data)
+            cam_id = frame_meta.source_id  # there's also frame_meta.batch_id
 
             # Iterate objects in a frame
             l_obj = frame_meta.obj_meta_list
             while l_obj is not None:
-                try:
-                    obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
+                obj_meta = pyds.NvDsObjectMeta.cast(l_obj.data)
 
-                    # This is all in image frame, e.g.: 1092.7200927734375 93.68058776855469 248.01895141601562 106.38716125488281
-                    l, w = obj_meta.rect_params.left, obj_meta.rect_params.width
-                    t, h = obj_meta.rect_params.top, obj_meta.rect_params.height
+                # This is all in image frame, e.g.: 1092.7200927734375 93.68058776855469 248.01895141601562 106.38716125488281
+                l, w = obj_meta.rect_params.left, obj_meta.rect_params.width
+                t, h = obj_meta.rect_params.top, obj_meta.rect_params.height
 
-                    position = (l, w, t, h)
-                    cls_id = obj_meta.class_id
+                position = (l, w, t, h)
+                cls_id = obj_meta.class_id
 
-                    class2name ={
-                        0: 'person',
-                        1: 'bag',
-                        2: 'face'
-                    }
-                    name = class2name[cls_id]
+                class2name ={
+                    0: 'person',
+                    1: 'bag',
+                    2: 'face'
+                }
+                name = class2name[cls_id]
 
-                    detections.append({
-                        'class': name,
-                        'position': position
-                        })
+                detections.append({
+                    'class': name,
+                    'position': position
+                    })
 
-                    obj_meta.rect_params.border_color.set(0.0, 1.0, 0.0, 0.0)
+                obj_meta.rect_params.border_color.set(0.0, 1.0, 0.0, 0.0)
 
-                except StopIteration:
-                    break
-
-                try:
-                    l_obj = l_obj.next
-                except StopIteration:
-                    break
+                l_obj = l_obj.next
 
             self.detections[cam_id] = detections
-            
-            try:
-                l_frame = l_frame.next
-            except StopIteration:
-                break
+
+            l_frame = l_frame.next
 
         self._log.info(
             f"Detection parsing callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
