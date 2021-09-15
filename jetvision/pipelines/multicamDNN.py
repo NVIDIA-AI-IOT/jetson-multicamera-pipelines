@@ -252,11 +252,12 @@ class CameraPipelineDNN(BasePipeline):
 
                 position = (l, w, t, h)
                 cls_id = obj_meta.class_id
+                conf = obj_meta.confidence
 
                 class2name = {0: "person", 1: "bag", 2: "face"}
                 name = class2name[cls_id]
 
-                detections.append({"class": name, "position": position})
+                detections.append({"class": name, "position": position, "confidence": conf})
 
                 obj_meta.rect_params.border_color.set(0.0, 1.0, 0.0, 0.0)
 
