@@ -183,6 +183,5 @@ remap_rectify_params.yml # Stereo rectify parameters
 *.mkv
 
 # Deepstream + TRT
-*.txt
 *.etlt
 *.engine
