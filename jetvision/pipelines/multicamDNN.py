@@ -22,6 +22,7 @@ from .bins import (
 
 from .basepipeline import BasePipeline
 
+
 class CameraPipelineDNN(BasePipeline):
     def __init__(self, cameras, models, *args, **kwargs):
         """
@@ -33,14 +34,13 @@ class CameraPipelineDNN(BasePipeline):
         self._m = models
         self._c = cameras
 
-
         # Runtime parameters
         N_CLASSES = 4
         N_CAMS = len(cameras) + 1
         self.images = [None for _ in range(0, N_CAMS)]
         self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, N_CAMS)]
         self.frame_n = [0 for _ in range(0, N_CAMS)]
-        
+
         super().__init__()
 
     def _create_pipeline(self):
@@ -180,11 +180,12 @@ class CameraPipelineDNN(BasePipeline):
         osdsinkpad = _sanitize(nvosd.get_static_pad("sink"))
         osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._parse_dets_callback, 0)
 
-
         for idx, source in enumerate(sources):
             sourcepad = _sanitize(source.get_static_pad("src"))
-            cb_args =  {'image_idx': idx}
-            sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._get_np_img_callback, cb_args)
+            cb_args = {"image_idx": idx}
+            sourcepad.add_probe(
+                Gst.PadProbeType.BUFFER, self._get_np_img_callback, cb_args
+            )
 
         return pipeline
 
@@ -225,7 +226,7 @@ class CameraPipelineDNN(BasePipeline):
             return Gst.PadProbeReturn.DROP
 
         buff_ptr = hash(gst_buffer)  # Memory address of gst_buffer
-        idx = u_data['image_idx']
+        idx = u_data["image_idx"]
         img = pyds.get_nvds_buf_surface(buff_ptr, 0)
         self.images[idx] = img[:, :, :3]  # RGBA->RGB
 
@@ -236,7 +237,7 @@ class CameraPipelineDNN(BasePipeline):
 
     def _parse_dets_callback(self, pad, info, u_data):
         cb_start = time.perf_counter()
-        
+
         gst_buffer = info.get_buffer()
         if not gst_buffer:
             logging.error("Detection callback unable to get GstBuffer ")
@@ -266,17 +267,10 @@ class CameraPipelineDNN(BasePipeline):
                 position = (l, w, t, h)
                 cls_id = obj_meta.class_id
 
-                class2name ={
-                    0: 'person',
-                    1: 'bag',
-                    2: 'face'
-                }
+                class2name = {0: "person", 1: "bag", 2: "face"}
                 name = class2name[cls_id]
 
-                detections.append({
-                    'class': name,
-                    'position': position
-                    })
+                detections.append({"class": name, "position": position})
 
                 obj_meta.rect_params.border_color.set(0.0, 1.0, 0.0, 0.0)
 
@@ -290,7 +284,6 @@ class CameraPipelineDNN(BasePipeline):
             f"Detection parsing callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
         )
         return Gst.PadProbeReturn.OK
-
 
 
 if __name__ == "__main__":
