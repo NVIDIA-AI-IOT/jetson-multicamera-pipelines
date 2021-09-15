@@ -1,5 +1,4 @@
 import time
-import cv2
 
 from jetvision import CameraPipelineDNN
 from jetvision.models import PeopleNet, DashCamNet
@@ -15,7 +14,8 @@ if __name__ == "__main__":
         cameras=[5, 8, 2],
         models=[
             # PeopleNet.DLA1,
-            PeopleNet.DLA0
+            PeopleNet.DLA1,
+            DashCamNet.DLA0
         ],
         save_video=True,
         save_video_folder="/home/nx/logs/videos",
