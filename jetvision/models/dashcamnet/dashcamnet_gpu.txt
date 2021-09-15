@@ -1,13 +1,12 @@
 
 [property]
-enable-dla=1
-use-dla-core=0
+gpu-id=0
 net-scale-factor=0.0039215697906911373
 tlt-model-key=tlt_encode
 tlt-encoded-model=./dashcamnet_pruned_v1.0/resnet18_dashcamnet_pruned.etlt
 labelfile-path=./dashcamnet_pruned_v1.0/labels.txt
 int8-calib-file=./dashcamnet_pruned_v1.0/dashcamnet_int8.txt
-model-engine-file=./dashcamnet_pruned_v1.0/resnet18_dashcamnet_pruned.etlt_b3_dla0_int8.engine
+model-engine-file=./tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt_b3_gpu0_int8.engine
 infer-dims=3;544;960
 uff-input-blob-name=input_1
 process-mode=1
