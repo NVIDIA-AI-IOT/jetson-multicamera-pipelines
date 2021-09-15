@@ -185,3 +185,7 @@ remap_rectify_params.yml # Stereo rectify parameters
 # Deepstream + TRT
 *.etlt
 *.engine
+
+# Downloaded NGC files
+*/models/dashcamnet/dashcamnet_pruned_v1.0/
+*/models/peoplenet/tlt_peoplenet_pruned_v2.0/
