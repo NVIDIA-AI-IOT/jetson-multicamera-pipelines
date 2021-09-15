@@ -36,14 +36,14 @@ class CameraPipelineDNN(BasePipeline):
         self.detections = [[] for _ in range(0, N_CAMS)]  # dets for each camera
         self.frame_n = [-1 for _ in range(0, N_CAMS)]
 
-        super().__init__()
+        super().__init__(**kwargs)
 
-    def _create_pipeline(self):
+    def _create_pipeline(self, **kwargs) -> Gst.Pipeline:
         # gst pipeline object
         if type(self._m) is list:
-            p = self._create_pipeline_fully_connected(self._c, self._m)
+            p = self._create_pipeline_fully_connected(self._c, self._m, **kwargs)
         elif type(self._m) is dict:
-            p = self._create_pipeline_sparsely_connected(self._c, self._m)
+            p = self._create_pipeline_sparsely_connected(self._c, self._m, **kwargs)
 
         return p
 
