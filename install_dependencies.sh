@@ -13,28 +13,19 @@ build_gst_python()
 	sudo make install; # TODO: is sudo necessary?
 }
 
-build_ds_bindings()
+install_ds()
 {
-    sudo apt install cuda-nvrtc-10-2 -y;
+	sudo apt-get install deepstream-5.1 -y;
+}
+
+install_pyds()
+{
     cd /opt/nvidia/deepstream/deepstream/lib;
     sudo python3 setup.py install;
 }
 
-download_models()
-{
-    MODEL_DIR=$HOME/.jetvision-files/models;
-	mkdir -p $MODEL_DIR/peoplenet;
-    wget --content-disposition https://api.ngc.nvidia.com/v2/models/nvidia/tlt_peoplenet/versions/pruned_v2.0/zip -O /tmp/tlt_peoplenet_pruned_v2.0.zip -o /dev/null;
-    unzip /tmp/tlt_peoplenet_pruned_v2.0.zip -d $MODEL_DIR/peoplenet/tlt_peoplenet_pruned_v2.0
-}
-
-echo "Installing..."
-
-# Build and install python bindings
 build_gst_python
-# Install ds bindings for python
-build_ds_bindings
-# Downloads pretrained models from tlt
-download_models
+install_ds
+install_pyds
 
 
