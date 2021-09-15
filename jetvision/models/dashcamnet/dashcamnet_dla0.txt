@@ -1,0 +1,26 @@
+
+[property]
+enable-dla=1
+use-dla-core=0
+net-scale-factor=0.0039215697906911373
+tlt-model-key=tlt_encode
+tlt-encoded-model=./dashcamnet_pruned_v1.0/resnet18_dashcamnet_pruned.etlt
+labelfile-path=./dashcamnet_pruned_v1.0/labels.txt
+int8-calib-file=./dashcamnet_pruned_v1.0/dashcamnet_int8.txt
+model-engine-file=./dashcamnet_pruned_v1.0/resnet18_dashcamnet_pruned.etlt_b3_dla0_int8.engine
+infer-dims=3;544;960
+uff-input-blob-name=input_1
+process-mode=1
+model-color-format=0
+network-mode=1
+num-detected-classes=3
+cluster-mode=1
+interval=0
+gie-unique-id=5
+output-blob-names=output_bbox/BiasAdd;output_cov/Sigmoid
+
+[class-attrs-all]
+pre-cluster-threshold=0.4
+## Set eps=0.7 and minBoxes for cluster-mode=1(DBSCAN)
+eps=0.7
+minBoxes=1
