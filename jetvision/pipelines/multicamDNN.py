@@ -36,7 +36,7 @@ class CameraPipelineDNN(BasePipeline):
 
         # Runtime parameters
         N_CLASSES = 4
-        N_CAMS = max(cameras) + 1
+        N_CAMS = len(cameras) + 1
         self.images = [None for _ in range(0, N_CAMS)]
         self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, N_CAMS)]
         self.frame_n = [0 for _ in range(0, N_CAMS)]
