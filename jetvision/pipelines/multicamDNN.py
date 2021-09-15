@@ -7,7 +7,7 @@ import numpy as np
 import pyds
 
 gi.require_version("Gst", "1.0")
-from gi.repository import  Gst
+from gi.repository import Gst
 
 from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
 from .bins import (
@@ -31,11 +31,10 @@ class CameraPipelineDNN(BasePipeline):
         self._c = cameras
 
         # Runtime parameters
-        N_CLASSES = 4
         N_CAMS = len(cameras) + 1
-        self.images = [None for _ in range(0, N_CAMS)]
-        self.detections = [[0 for n in range(0, N_CLASSES)] for _ in range(0, N_CAMS)]
-        self.frame_n = [0 for _ in range(0, N_CAMS)]
+        self.images = [np.empty((1080, 1920, 3)) for _ in range(0, N_CAMS)]
+        self.detections = [[] for _ in range(0, N_CAMS)]  # dets for each camera
+        self.frame_n = [-1 for _ in range(0, N_CAMS)]
 
         super().__init__()
 
@@ -64,21 +63,22 @@ class CameraPipelineDNN(BasePipeline):
         pipeline = Gst.Pipeline()
         _err_if_none(pipeline)
 
+        n_cams = len(cameras)
         sources = self._make_sources(cameras)
 
         # Create muxer
         mux = _make_element_safe("nvstreammux")
-        mux.set_property("live-source", 1)
+        mux.set_property("live-source", True)
         mux.set_property("width", 1920)
         mux.set_property("height", 1080)
-        mux.set_property("batch-size", len(cameras))
+        mux.set_property("batch-size", n_cams)
         mux.set_property("batched-push-timeout", 4000000)
 
         # Create nvinfers
         nvinfers = [_make_element_safe("nvinfer") for _ in model_list]
         for m_path, nvinf in zip(model_list, nvinfers):
             nvinf.set_property("config-file-path", m_path)
-            nvinf.set_property("batch-size", 3)
+            nvinf.set_property("batch-size", n_cams)
             # TODO: expose this
             # nvinf.set_property("interval", 5) # to infer every n batches
 
@@ -87,8 +87,10 @@ class CameraPipelineDNN(BasePipeline):
         nvosd = _make_element_safe("nvdsosd")
 
         tiler = _make_element_safe("nvmultistreamtiler")
-        tiler.set_property("rows", 1)
-        tiler.set_property("columns", 3)
+
+        n_cols = min(n_cams, 3)  # max 3 cameras in a row. More looks overcrowded.
+        tiler.set_property("rows", n_cams // n_cols)
+        tiler.set_property("columns", n_cols)
         # Encoder crashes when we attempt encoding 5760 x 1080, so we set it lower
         # TODO: Is that a bug, or hw limitation?
 
@@ -102,11 +104,9 @@ class CameraPipelineDNN(BasePipeline):
         tee = _make_element_safe("tee")
 
         sinks = []
-        if save_h264:
+        if save_video:
             ts = time.strftime("%Y-%m-%dT%H-%M-%S%z")
-            encodebin = make_nvenc_bin(
-                filepath=save_h264_path+f"jetvision{ts}.mkv"
-            )
+            encodebin = make_nvenc_bin(filepath=save_video_folder + f"/jetvision{ts}.mkv")
             sinks.append(encodebin)
         if display:
             overlay = _make_element_safe("nvoverlaysink")
@@ -263,6 +263,7 @@ class CameraPipelineDNN(BasePipeline):
                 l_obj = l_obj.next
 
             self.detections[cam_id] = detections
+            self.frame_n[cam_id] = frame_meta.frame_num
 
             l_frame = l_frame.next
 
@@ -270,20 +271,3 @@ class CameraPipelineDNN(BasePipeline):
             f"Detection parsing callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
         )
         return Gst.PadProbeReturn.OK
-
-
-if __name__ == "__main__":
-
-    pipeline = CameraPipelineDNN(n_cams=3)
-    pipeline.start()
-
-    while not pipeline.running():
-        time.sleep(1)
-
-    try:
-        while True:
-            print(pipeline.images[2].shape)
-            print(pipeline.detections[0])
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("Exiting...")
