@@ -285,35 +285,7 @@ class CameraPipelineDNN(BasePipeline):
                     break
 
             self.detections[cam_id] = detections
-
-            # display_meta = pyds.nvds_acquire_display_meta_from_pool(batch_meta)
-            # display_meta.num_labels = 1
-            # py_nvosd_text_params = display_meta.text_params[0]
-
-            # py_nvosd_text_params.display_text = "Frame Number={} Number of Objects={} Vehicle_count={} Person_count={}".format(
-            #     self._frame_n,
-            #     num_rects,
-            #     self._detections[PGIE_CLASS_ID_VEHICLE],
-            #     self._detections[PGIE_CLASS_ID_PERSON],
-            # )
-
-            # # Now set the offsets where the string should appear
-            # py_nvosd_text_params.x_offset = 10
-            # py_nvosd_text_params.y_offset = 12
-
-            # # Font , font-color and font-size
-            # py_nvosd_text_params.font_params.font_name = "Serif"
-            # py_nvosd_text_params.font_params.font_size = 10
-            # # set(red, green, blue, alpha); set to White
-            # py_nvosd_text_params.font_params.font_color.set(1.0, 1.0, 1.0, 1.0)
-
-            # # Text background color
-            # py_nvosd_text_params.set_bg_clr = 1
-            # # set(red, green, blue, alpha); set to Black
-            # py_nvosd_text_params.text_bg_clr.set(0.0, 0.0, 0.0, 1.0)
-            # # Using pyds.get_string() to get display_text as string
-            # # print(pyds.get_string(py_nvosd_text_params.display_text))
-            # pyds.nvds_add_display_meta_to_frame(frame_meta, display_meta)
+            
             try:
                 l_frame = l_frame.next
             except StopIteration:
