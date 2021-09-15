@@ -52,29 +52,6 @@ class CameraPipelineDNN(BasePipeline):
 
         return p
 
-    @staticmethod
-    def _make_sources(cameras: list) -> list:
-        # Create pre-configured sources with appropriate type: argus or v4l
-        sources = []
-        for c in cameras:
-            # int -> bin with arguscamerasrc (e.g. 0)
-            # str -> bin with nv4l2src (e.g. '/dev/video0)
-            if type(c) is int:
-                source = make_argus_cam_bin(c)
-            elif type(c) is str:
-                source = make_v4l2_cam_bin(c)
-            else:
-                raise TypeError(
-                    f"Error parsing 'cameras' argument. Valid cameras must be either:\n\
-                    1) 'str' type for v4l2 (e.g. '/dev/video0')\n\
-                    2) 'int' type for argus (0)\n\
-                    Got '{type(c)}'"
-                )
-
-            sources.append(source)
-
-        return sources
-
     def _create_pipeline_fully_connected(
         self,
         cameras,
@@ -210,6 +187,29 @@ class CameraPipelineDNN(BasePipeline):
             sourcepad.add_probe(Gst.PadProbeType.BUFFER, self._get_np_img_callback, cb_args)
 
         return pipeline
+
+    @staticmethod
+    def _make_sources(cameras: list) -> list:
+        # Create pre-configured sources with appropriate type: argus or v4l
+        sources = []
+        for c in cameras:
+            # int -> bin with arguscamerasrc (e.g. 0)
+            # str -> bin with nv4l2src (e.g. '/dev/video0)
+            if type(c) is int:
+                source = make_argus_cam_bin(c)
+            elif type(c) is str:
+                source = make_v4l2_cam_bin(c)
+            else:
+                raise TypeError(
+                    f"Error parsing 'cameras' argument. Valid cameras must be either:\n\
+                    1) 'str' type for v4l2 (e.g. '/dev/video0')\n\
+                    2) 'int' type for argus (0)\n\
+                    Got '{type(c)}'"
+                )
+
+            sources.append(source)
+
+        return sources
 
     def _get_np_img_callback(self, pad, info, u_data):
         """
