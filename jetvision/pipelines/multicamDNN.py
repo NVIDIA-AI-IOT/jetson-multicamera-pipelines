@@ -1,6 +1,4 @@
-import logging  # TODO: print -> logging
-import sys
-import os
+import logging
 import time
 from threading import Thread
 
