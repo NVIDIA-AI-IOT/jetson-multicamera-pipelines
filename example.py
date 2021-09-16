@@ -31,7 +31,7 @@ if __name__ == "__main__":
         # Assuming there's one detection in `image[0]`, `dets` can look like so:
         # [{
         #     'class': 'person',
-        #     'position': (361.3149719238281, 195.60507202148438, 891.962890625, 186.0518341064453),
+        #     'position': (361.31, 195.60, 891.96, 186.05), # bbox (left, width, top, height)
         #     'confidence': 0.92
         # }]
 
