@@ -95,7 +95,7 @@ def make_v4l2_cam_bin(dev="/dev/video3") -> Gst.Bin:
     vidconv_cf = _make_element_safe("capsfilter")
     # Ensure we output something nvvideoconvert has caps for
     vidconv_cf.set_property(
-        "caps", Gst.Caps.from_string("video/x-raw, format=(string)RGBA")
+        "caps", Gst.Caps.from_string("video/x-raw, format=(string)RGBA, framerate=(fraction)30/1")
     )
 
     nvvidconv = _make_element_safe("nvvideoconvert")
