@@ -32,6 +32,7 @@ class BasePipeline(Thread):
 
         self.start()
         self.wait_ready()
+        self._start_ts = time.perf_counter()
 
     def run(self):
 

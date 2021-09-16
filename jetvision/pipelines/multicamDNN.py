@@ -215,6 +215,7 @@ class CameraPipelineDNN(BasePipeline):
         idx = u_data["image_idx"]
         img = pyds.get_nvds_buf_surface(buff_ptr, 0)
         self.images[idx] = img[:, :, :3]  # RGBA->RGB
+        self.frame_n[idx] += 1
 
         self._log.info(
             f"Image ingest callback for image {idx} took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
@@ -265,7 +266,7 @@ class CameraPipelineDNN(BasePipeline):
                 l_obj = l_obj.next
 
             self.detections[cam_id] = detections
-            self.frame_n[cam_id] = frame_meta.frame_num
+            self.det_n[cam_id] += 1
 
             l_frame = l_frame.next
 
@@ -273,3 +274,12 @@ class CameraPipelineDNN(BasePipeline):
             f"Detection parsing callback took {1000 * (time.perf_counter() - cb_start):0.2f} ms"
         )
         return Gst.PadProbeReturn.OK
+
+    def elapsed_time(self):
+        delta = time.perf_counter() - self._start_ts
+        return delta
+
+    def fps(self):
+        t = self.elapsed_time()
+        fps_list = [cnt/t for cnt in self.frame_n]
+        return fps_list
