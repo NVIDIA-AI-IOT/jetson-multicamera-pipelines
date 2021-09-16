@@ -31,10 +31,11 @@ class CameraPipelineDNN(BasePipeline):
         self._c = cameras
 
         # Runtime parameters
-        N_CAMS = len(cameras) + 1
+        N_CAMS = len(cameras)
         self.images = [np.empty((1080, 1920, 3)) for _ in range(0, N_CAMS)]
         self.detections = [[] for _ in range(0, N_CAMS)]  # dets for each camera
         self.frame_n = [-1 for _ in range(0, N_CAMS)]
+        self.det_n= [-1 for _ in range(0, N_CAMS)]
 
         super().__init__(**kwargs)
 
