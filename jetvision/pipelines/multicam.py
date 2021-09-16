@@ -19,6 +19,8 @@ from .bins import (
     make_argus_cam_bin,
 )
 
+from .basepipeline import BasePipeline
+
 
 def on_buffer():
     print("test")
@@ -26,9 +28,7 @@ def on_buffer():
     return Gst.FlowReturn.OK
 
 
-class CameraPipeline(Thread):
-    def __init__():
-        pass
+class CameraPipeline(BasePipeline):
 
     def __init__(self, camera):
         """
@@ -37,7 +37,6 @@ class CameraPipeline(Thread):
         - `list`: list of models to use on frames from all cameras
         """
 
-        super().__init__()
 
         # Gstreamer init
         GObject.threads_init()
@@ -49,19 +48,19 @@ class CameraPipeline(Thread):
         # create an event loop and feed gstreamer bus mesages to it
         self._mainloop = GObject.MainLoop()
 
-        self._p = self._make_singlecam_pipeline(camera)
+        self._camera = camera
+        self._p = self._create_pipeline()
 
         self._bus = self._p.get_bus()
         self._bus.add_signal_watch()
         self._bus.connect("message", bus_call, self._mainloop)
+        
+        super().__init__()
 
-        self.start()
-        self.wait_ready()
-
-    def _make_singlecam_pipeline(self, camera, filepath=None):
+    def _create_pipeline(self):
 
         pipeline = _sanitize(Gst.Pipeline())
-        cam = make_argus_cam_bin(camera)
+        cam = make_argus_cam_bin(self._camera)
         tee = _make_element_safe("tee")
         h264sink = make_nvenc_bin(f"/home/nx/logs/videos/jetvision-singlecam.mkv")
 
@@ -124,26 +123,3 @@ class CameraPipeline(Thread):
         arr = np.ndarray(shape=(h, w, c), buffer=buf2, dtype=np.uint8)
 
         return arr
-
-    def run(self):
-        # start play back and listen to events
-        print("Starting pipeline...")
-
-        self._p.set_state(Gst.State.PLAYING)
-        try:
-            self._mainloop.run()
-        except KeyboardInterrupt as e:
-            print(e)
-        finally:
-            self._p.set_state(Gst.State.NULL)
-
-    def stop(self):
-        self._p.set_state(Gst.State.NULL)
-
-    def running(self):
-        _, state, _ = self._p.get_state(1)
-        return True if state == Gst.State.PLAYING else False
-
-    def wait_ready(self):
-        while not self.running():
-            time.sleep(0.1)
