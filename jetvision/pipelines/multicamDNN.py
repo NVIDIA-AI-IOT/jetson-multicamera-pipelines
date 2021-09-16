@@ -162,10 +162,10 @@ class CameraPipelineDNN(BasePipeline):
         # tiler.link(transform)
         # transform.link(renderer)
 
-        # Register callback on OSD sinkpad.
+        # Register callback on the last nvinfer sinkpad.
         # This way we get access to object detection results
-        osdsinkpad = _sanitize(nvosd.get_static_pad("sink"))
-        osdsinkpad.add_probe(Gst.PadProbeType.BUFFER, self._parse_dets_callback, 0)
+        nvinfer_sinkpad = _sanitize(nvinfers[-1].get_static_pad("sink"))
+        nvinfer_sinkpad.add_probe(Gst.PadProbeType.BUFFER, self._parse_dets_callback, 0)
 
         for idx, source in enumerate(sources):
             sourcepad = _sanitize(source.get_static_pad("src"))
