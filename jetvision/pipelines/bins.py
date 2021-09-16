@@ -84,12 +84,14 @@ def make_argus_cam_bin(sensor_id) -> Gst.Bin:
     return bin
 
 
-def make_v4l2_cam_bin(dev="/dev/video3") -> Gst.Bin:
+def make_v4l2_cam_bin(dev: str) -> Gst.Bin:
+    # dev: v4l2 node e.g. "/dev/video3"
     bin = Gst.Bin()
 
     # Create v4l2 camera
     src = _make_element_safe("v4l2src")
     src.set_property("device", dev)
+    src.set_property("framerate", 30)
 
     vidconv = _make_element_safe("videoconvert")
     vidconv_cf = _make_element_safe("capsfilter")
