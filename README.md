@@ -1,5 +1,9 @@
 # JetVision
 
+Realtime CV/AI pipelines on Nvidia Jetson Platform.
+
+
+
 https://user-images.githubusercontent.com/26127866/131947398-59a12a95-82f6-4b48-8af7-34a325f0c0f4.mp4
 
 ## Quickstart
@@ -45,24 +49,20 @@ detections = pipeline.cameras[0].obj_dets
 
 ## Benchmarks
 
+| #   | Scenario                               | # cams       | JetPipelines CPU core % | nvargus-deamon CPU core % | GPU % | EMC util % | Power draw | Inference paramteres                                           |
+| --- | -------------------------------------- | ------------ | ----------------------- | ------------------------- | ----- | ---------- | ---------- | -------------------------------------------------------------- |
+| 1.  | 1xGMSL -> 2xDNNs + disp + encode       | 1            | 32%                     | 24%                       | <3%   | 57%        | 8.5W       | DLA0: PeopleNet DLA1: DashCamNet                               |
+| 2.  | 2xGMSL -> 2xDNNs + disp + encode       | 2            | 43%                     | 46%                       | <3%   | 62%        | 9.4W       | DLA0: PeopleNet DLA1: DashCamNet                               |
+| 3.  | 3xGMSL -> 2xDNNs + disp + encode       | 3            | 55%                     | 70%                       | <3%   | 68%        | 10.1W      | DLA0: PeopleNet DLA1: DashCamNet                               |
+| 4.  | Same as _#3_ with CPU @ 1.9GHz         | 3            | 45%                     | 54%                       | <3%   | 68%        | 10.4w      | DLA0: PeopleNet DLA1: DashCamNet                               |
+| 5.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5 (GMSL+v4l) | 57%                     | 70%                       | <3%   | 45%        | 9.1W       | DLA0: PeopleNet _(interval=1)_ DLA1: DashCamNet _(interval=1)_ |
+| 6.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5 (GMSL+v4l) | 50%                     | 70%                       | <3%   | 25%        | 7.5W       | DLA0: PeopleNet _(interval=6)_ DLA1: DashCamNet _(interval=6)_ |
+| 7.  | 3xGMSL -> 2xDNNs + disp + encode       | 5 (GMSL+v4l) | 62%                     | 77%                       | 99%   | 25%        | 15W        | GPU: PeopleNet                                                 |
 
-1. Scenario 1: 4x GMSL cameras
-
-| #   | Scenario                               | # cams       | JetPipelines CPU % | nvargus-deamon CPU % | GPU % | EMC util % | Power draw | Inference paramteres                                           |
-| --- | -------------------------------------- | ------------ | ------------------ | -------------------- | ----- | ---------- | ---------- | -------------------------------------------------------------- |
-| 1.  | 1xGMSL -> 2xDNNs + disp + encode       | 1            | 32%                | 24%                  | < 3%* | 57%        | 8.5W       | DLA0: PeopleNet DLA1: DashCamNet                               |
-| 2.  | 2xGMSL -> 2xDNNs + disp + encode       | 2            | 43%                | 46%                  | < 3%* | 62%        | 9.4W       | DLA0: PeopleNet DLA1: DashCamNet                               |
-| 3.  | 3xGMSL -> 2xDNNs + disp + encode       | 3            | 55%                | 70%                  | < 3%* | 68%        | 10.1W      | DLA0: PeopleNet DLA1: DashCamNet                               |
-| 4.  | Same as _#3_ with CPU @ 1.9GHz         | 3            | 45%                | 54%                  | < 3%* | 68%        | 10.4w      | DLA0: PeopleNet DLA1: DashCamNet                               |
-| 5.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5 (GMSL+v4l) | 57%                | 70%                  | < 3%* | 45%        | 9.1W       | DLA0: PeopleNet _(interval=1)_ DLA1: DashCamNet _(interval=1)_ |
-| 6.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5 (GMSL+v4l) | 50%                | 70%                  | < 3%* | 25%        | 7.5W       | DLA0: PeopleNet _(interval=6)_ DLA1: DashCamNet _(interval=6)_ |
-| 7.  | 3xGMSL -> 2xDNNs + disp + encode       | 5 (GMSL+v4l) | 62%                | 77%                  | 99%   | 25%        | 15W        | GPU: PeopleNet                                                 |
-
-
-- The residual GPU usage is caused by Sigmoid activations not being supported by DLA accelerators. They are computed withn CUDA backend.
-
-- 
-- CPU usage will vary depending on factors such as camera resolution, framerate, available video formats, etc.
+Notes:
+- All CPU numers are per-CPU core - i.e. `45%` in Scenario 4. means we use `45%/6=7.5%` of the entire CPU.
+- The residual GPU usage in DLA-accelerated nets is caused by Sigmoid activations being computed with CUDA backend. Remaining layers are computed on DLA.
+- CPU usage will vary depending on factors such as camera resolution, framerate, available video formats and driver implementation.
 
 ### Supported models / acceleratorss
 ```python
