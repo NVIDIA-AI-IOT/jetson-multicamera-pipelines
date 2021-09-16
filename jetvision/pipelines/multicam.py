@@ -1,5 +1,4 @@
 import logging  # TODO: print -> logging
-import sys
 import os
 import time
 from threading import Thread
@@ -37,23 +36,11 @@ class CameraPipeline(BasePipeline):
         - `list`: list of models to use on frames from all cameras
         """
 
-
-        # Gstreamer init
-        GObject.threads_init()
-        Gst.init(None)
-
         save_h264_path = "/home/nx/logs/videos"
         os.makedirs(save_h264_path, exist_ok=True)
-
-        # create an event loop and feed gstreamer bus mesages to it
-        self._mainloop = GObject.MainLoop()
-
+        
         self._camera = camera
         self._p = self._create_pipeline()
-
-        self._bus = self._p.get_bus()
-        self._bus.add_signal_watch()
-        self._bus.connect("message", bus_call, self._mainloop)
         
         super().__init__()
 
