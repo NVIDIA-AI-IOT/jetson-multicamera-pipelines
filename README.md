@@ -2,54 +2,53 @@
 
 Realtime CV/AI pipelines on Nvidia Jetson Platform.
 
-
-
 https://user-images.githubusercontent.com/26127866/131947398-59a12a95-82f6-4b48-8af7-34a325f0c0f4.mp4
 
 ## Quickstart
 
-Install with:
+Install:
 ```shell
 git clone https://github.com/tomek-l/nv-jetvision.git
 cd nv-jetvision
 bash install-dependencies.sh
 pip3 install .
 ```
-
-
-```python
-from jetvision import MultiCamPipeline, models
-import vehicle
-
-pipeline = MultiCamPipeline(
-    cam_ids = [0, 1, 2]  #  dynamically create pipeline for n cameras 1..6
-    models=[
-        models.PeopleNet.DLA0, # DNNs to perform inference with
-        models.DashCamNet.DLA1
-        ]
-    # Saving h264 stream # TODO: add option for jpg stills?
-    save_h264=True,
-    save_h264_path="/home/nx/logs/videos",
-    # Streaming
-    publish_rtsp_cam=True,
-    publish_rtsp_port=5000
-)
-pipeline.start()
-pipeline.wait_ready()
+Run:
+```shell
+source exports.sh
+python3 example.py
 ```
 
-### Consuming the frames / detection results
+## Usage example
+
 ```python
-# Ready image mapped to CPU memory as
-# np.array with shape (1080, 1920, 3)
-img = pipeline.cameras[0].image  
-# Detection results from the models as python dicts
-detections = pipeline.cameras[0].obj_dets
+import time
+from jetvision import CameraPipelineDNN
+from jetvision.models import PeopleNet, DashCamNet
+
+if __name__ == "__main__":
+
+    pipeline = CameraPipelineDNN(
+        cameras=[2, 5, 8],
+        models=[
+            PeopleNet.DLA1,
+            DashCamNet.DLA0,
+            # PeopleNet.GPU
+        ],
+        save_video=True,
+        save_video_folder="/home/nx/logs/videos",
+        display=True,
+    )
+
+    while pipeline.running():
+        arr = pipeline.images[0] # (1080, 1920, 3) np.array (RGB 1080p image)
+        dets = pipeline.detections[0] # Detections from the DNNs
+        time.sleep(1/30)
 ```
 
 ## Benchmarks
 
-| #   | Scenario                               | # cams       | JetPipelines<br>CPU core util. | argus-deamon<br>CPU core util. | CPU<br>total | GPU % | EMC util % | Power draw | Inference Hardware                                             |
+| #   | Scenario                               | # cams       | JetVision<br>CPU core util. | argus-deamon<br>CPU core util. | CPU<br>total | GPU % | EMC util % | Power draw | Inference Hardware                                             |
 | --- | -------------------------------------- | ------------ | ------------------------------ | ------------------------------ | ------------ | ----- | ---------- | ---------- |-------------------------------------------------------------- |
 | 1.  | 1xGMSL -> 2xDNNs + disp + encode       | 1            | 32%                            | 24%                            | 56%          | <3%   | 57%        | 8.5W       | DLA0: PeopleNet DLA1: DashCamNet                               |
 | 2.  | 2xGMSL -> 2xDNNs + disp + encode       | 2            | 43%                            | 46%                            | 89%          | <3%   | 62%        | 9.4W       | DLA0: PeopleNet DLA1: DashCamNet                               |
@@ -60,13 +59,16 @@ detections = pipeline.cameras[0].obj_dets
 | 7.  | 3xGMSL -> 2xDNNs + disp + encode       | 5 (GMSL+v4l) | 62%                            | 77%                            | 139%         | 99%   | 25%        | 15W        | GPU: PeopleNet                                                 |
 
 Notes:
-- All CPU numers are per-CPU core. For example, the `45%` for JetPipelines process in Scenario 4. means we use `45%/6=7.5%` of the entire CPU.
+- All CPU numers are per-CPU core. For example, the `45%` for JetVision process in Scenario 4. means we use `45%/6=7.5%` of the entire CPU.
 - The residual GPU usage in DLA-accelerated nets is caused by Sigmoid activations being computed with CUDA backend. Remaining layers are computed on DLA.
 - CPU usage will vary depending on factors such as camera resolution, framerate, available video formats and driver implementation.
 
+
+## More 
+
 ### Supported models / acceleratorss
 ```python
-pipeline = MultiCamPipeline(
+pipeline = CameraPipelineDNN(
     cam_ids = [0, 1, 2]
     models=[
         models.PeopleNet.DLA0,
@@ -80,20 +82,20 @@ pipeline = MultiCamPipeline(
 )
 ```
 
-### Map specific images to specific models for inference:
+<!-- ### You can specific images to specific models for inference:
 ```python
-pipeline = MultiCamPipeline(
+pipeline = CameraPipelineDNN(
     cam_ids = list(range(6)),
     models={
-        models.PeopleNet.DLA0: [0, 1, 2],
-        models.PeopleNet.DLA1: [3, 4, 5],
+        models.PeopleNet.DLA0: [0, 1],
+        models.PeopleNet.DLA1: [2, 3],
         models.DashCamNet.GPU: [0, 1, 2, 3, 4, 5],
         }
     # ...
 )
-```
+``` -->
 
-## Examples showing custom application on top of jetmulticam
+<!-- ### Examples showing custom application on top of jetmulticam
 
 How to build your own application using `jetmulticam`
 
@@ -101,7 +103,7 @@ How to build your own application using `jetmulticam`
 - [examples/01-example-pytorch-integration-todo.ipynb](examples/01-example-pytorch-integration-todo.ipynb)
 - [examples/02-example-pytorch-navigation-todo.ipynb](examples/02-example-pytorch-navigation-todo.ipynb)
 - [examples/03-example-inspection-robot-idea.py](examples/03-example-inspection-robot-idea.py)
-- [examples/04-example-retail-robot-idea.py](examples/04-example-retail-robot-idea.py)
+- [examples/04-example-retail-robot-idea.py](examples/04-example-retail-robot-idea.py) -->
 
 ## More
 
@@ -111,12 +113,7 @@ Ready pipelines for specific multicamera usecase deployable via `gst-launch-1.0`
 
 - [x] Add programatic support for multiple sources
 - [x] Add programatic support for multiple models
-- [ ] Add the diagram of the underlying gstreamer pipeline
 - [x] Pano stitcher demo
 - [x] Robot demo in Endeavor
 - [x] `install.sh` -> `setup.py` for easier pip3 install
-- [ ] `MultiCamPipeline` and `CameraPipeline` could have the same base class for code re-use
-
- gst-launch-1.0 -v udpsrc port=5000 ! \
- "application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! \
- rtph264depay ! h264parse ! decodebin ! videoconvert ! autovideosink sync=false
+- [x] `CameraPipelineDNN` and `CameraPipeline` could have the same base class for code re-use
