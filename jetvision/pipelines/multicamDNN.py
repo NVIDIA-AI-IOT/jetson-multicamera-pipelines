@@ -20,7 +20,7 @@ from .basepipeline import BasePipeline
 
 
 class CameraPipelineDNN(BasePipeline):
-    def __init__(self, cameras, models, *args, **kwargs):
+    def __init__(self, cameras, models, model_intervals=None, *args, **kwargs):
         """
         models parameter can be:
         - `dict`: mapping of models->sensor-ids to infer on
@@ -29,6 +29,15 @@ class CameraPipelineDNN(BasePipeline):
 
         self._m = models
         self._c = cameras
+
+        # model interval is 0 by default
+        if model_intervals is None:
+            model_intervals = [0 for _ in models]
+
+        self._model_intervals =  model_intervals
+
+        if len(self._m) != len(self._model_intervals):
+            raise ValueError("len(model_intervals) must be equal to len(models)!")
 
         # Runtime parameters
         N_CAMS = len(cameras)
@@ -77,11 +86,10 @@ class CameraPipelineDNN(BasePipeline):
 
         # Create nvinfers
         nvinfers = [_make_element_safe("nvinfer") for _ in model_list]
-        for m_path, nvinf in zip(model_list, nvinfers):
+        for m_path, nvinf, interval in zip(model_list, nvinfers, self._model_intervals):
             nvinf.set_property("config-file-path", m_path)
             nvinf.set_property("batch-size", n_cams)
-            # TODO: expose this
-            # nvinf.set_property("interval", 5) # to infer every n batches
+            nvinf.set_property("interval", interval) # to infer every n batches
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
         nvvidconv = _make_element_safe("nvvideoconvert")
