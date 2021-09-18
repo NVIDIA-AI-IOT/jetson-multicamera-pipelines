@@ -29,7 +29,7 @@ def on_buffer():
 
 class CameraPipeline(BasePipeline):
 
-    def __init__(self, camera):
+    def __init__(self, camera, **kwargs):
         """
         models parameter can be:
         - `dict`: mapping of models->sensor-ids to infer on
@@ -40,9 +40,8 @@ class CameraPipeline(BasePipeline):
         os.makedirs(save_h264_path, exist_ok=True)
         
         self._camera = camera
-        self._p = self._create_pipeline()
         
-        super().__init__()
+        super().__init__(**kwargs)
 
     def _create_pipeline(self):
 
