@@ -16,6 +16,7 @@ from .bins import (
     make_argus_camera_configured,
     make_v4l2_cam_bin,
     make_argus_cam_bin,
+    make_nvenc_bin_no_ds
 )
 
 from .basepipeline import BasePipeline
@@ -46,26 +47,30 @@ class CameraPipeline(BasePipeline):
     def _create_pipeline(self):
 
         pipeline = _sanitize(Gst.Pipeline())
-        cam = make_argus_cam_bin(self._camera)
+        cam = make_argus_camera_configured(self._camera, bufapi_version=0)
         tee = _make_element_safe("tee")
-        h264sink = make_nvenc_bin(f"/home/nx/logs/videos/jetvision-singlecam.mkv")
+        h264sink = make_nvenc_bin_no_ds(f"/home/nx/logs/videos/jetvision-singlecam.mkv")
 
-        nvvidconv = _make_element_safe("nvvideoconvert")
+        # Converter
+        nvvidconv = _make_element_safe("nvvidconv")
         nvvidconv_cf = _make_element_safe("capsfilter")
-        # Ensure we output something nvvideoconvert has caps for
         nvvidconv_cf.set_property(
             "caps", Gst.Caps.from_string("video/x-raw, format=(string)BGRx")
         )
 
+        # Appsink
         self._appsink = appsink = _make_element_safe("appsink")
         appsink.set_property("max-buffers", 1)
         appsink.set_property("drop", True)
         appsink.connect("new-sample", on_buffer, None)
 
-        for el in [cam, tee, h264sink, appsink, nvvidconv, nvvidconv_cf]:
+        sinks = [h264sink, appsink]
+
+        for el in [cam, nvvidconv, *sinks]:
             pipeline.add(el)
 
-        sinks = [h264sink, nvvidconv]
+        cam.link(nvvidconv)
+        nvvidconv.link(h264sink)
 
         for idx, sink in enumerate(sinks):
             # Use queues for each sink. This ensures the sinks can execute in separate threads
