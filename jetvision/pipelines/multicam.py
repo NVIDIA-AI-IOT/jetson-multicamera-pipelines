@@ -55,7 +55,7 @@ class CameraPipeline(BasePipeline):
         nvvidconv = _make_element_safe("nvvidconv")
         nvvidconv_cf = _make_element_safe("capsfilter")
         nvvidconv_cf.set_property(
-            "caps", Gst.Caps.from_string("video/x-raw, format=(string)BGRx")
+            "caps", Gst.Caps.from_string("video/x-raw, format=(string)RGBA") # NOTE: make parametric? i.e. height=1080, width=1920
         )
 
         # Appsink
@@ -66,11 +66,12 @@ class CameraPipeline(BasePipeline):
 
         sinks = [h264sink, appsink]
 
-        for el in [cam, nvvidconv, *sinks]:
+        for el in [cam, nvvidconv, nvvidconv_cf, tee, *sinks]:
             pipeline.add(el)
 
         cam.link(nvvidconv)
-        nvvidconv.link(h264sink)
+        nvvidconv.link(nvvidconv_cf)
+        nvvidconv_cf.link(tee)
 
         for idx, sink in enumerate(sinks):
             # Use queues for each sink. This ensures the sinks can execute in separate threads
@@ -87,8 +88,6 @@ class CameraPipeline(BasePipeline):
 
         nvvidconv.link(nvvidconv_cf)
         nvvidconv_cf.link(appsink)
-
-        cam.link(tee)
 
         return pipeline
 
