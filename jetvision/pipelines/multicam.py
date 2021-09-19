@@ -16,7 +16,7 @@ from .bins import (
     make_argus_camera_configured,
     make_v4l2_cam_bin,
     make_argus_cam_bin,
-    make_nvenc_bin_no_ds
+    make_nvenc_bin_no_ds,
 )
 
 from .basepipeline import BasePipeline
@@ -28,9 +28,43 @@ def on_buffer():
     return Gst.FlowReturn.OK
 
 
-class CameraPipeline(BasePipeline):
+def make_conv_bin(caps="video/x-raw, format=(string)RGBA") -> Gst.Bin:
+    bin = Gst.Bin()
 
-    def __init__(self, camera, **kwargs):
+    nvvidconv = _make_element_safe("nvvidconv")
+    conv_cf = _make_element_safe("capsfilter")
+    conv_cf.set_property(
+        "caps",
+        Gst.Caps.from_string(
+            caps
+        ),  # NOTE: make parametric? i.e. height=1080, width=1920
+    )
+
+    nvvidconv.link(conv_cf)
+
+    # We enter via conv sink pad
+    enter_pad = _sanitize(nvvidconv.get_static_pad("sink"))
+    gp_enter = _sanitize(Gst.GhostPad.new(name="sink", target=enter_pad))
+    bin.add_pad(gp_enter)
+
+    # We exit via conv_cf source pad
+    exit_pad = _sanitize(conv_cf.get_static_pad("src"))
+    gp = _sanitize(Gst.GhostPad.new(name="src", target=exit_pad))
+    bin.add_pad(gp)
+
+    return bin
+
+
+def make_appsink_configured() -> Gst.Element:
+    appsink = _make_element_safe("appsink")
+    appsink.set_property("max-buffers", 1)
+    appsink.set_property("drop", True)
+    # appsink.connect("new-sample", on_buffer, None)
+    return appsink
+
+
+class CameraPipeline(BasePipeline):
+    def __init__(self, cameras, **kwargs):
         """
         models parameter can be:
         - `dict`: mapping of models->sensor-ids to infer on
@@ -39,60 +73,70 @@ class CameraPipeline(BasePipeline):
 
         save_h264_path = "/home/nx/logs/videos"
         os.makedirs(save_h264_path, exist_ok=True)
-        
-        self._camera = camera
-        
+
+        self._cams = cameras
+
         super().__init__(**kwargs)
 
     def _create_pipeline(self):
 
         pipeline = _sanitize(Gst.Pipeline())
-        cam = make_argus_camera_configured(self._camera, bufapi_version=0)
-        tee = _make_element_safe("tee")
-        h264sink = make_nvenc_bin_no_ds(f"/home/nx/logs/videos/jetvision-singlecam.mkv")
 
-        # Converter
-        nvvidconv = _make_element_safe("nvvidconv")
-        nvvidconv_cf = _make_element_safe("capsfilter")
-        nvvidconv_cf.set_property(
-            "caps", Gst.Caps.from_string("video/x-raw, format=(string)RGBA") # NOTE: make parametric? i.e. height=1080, width=1920
-        )
+        cameras = [
+            make_argus_camera_configured(c, bufapi_version=0) for c in self._cams
+        ]
+        # convs = [make_conv_bin() for _ in self._cams]
+        convs = [_make_element_safe("nvvidconv") for _ in self._cams]
 
-        # Appsink
-        self._appsink = appsink = _make_element_safe("appsink")
-        appsink.set_property("max-buffers", 1)
-        appsink.set_property("drop", True)
-        appsink.connect("new-sample", on_buffer, None)
+        conv_cfs = [_make_element_safe("capsfilter") for _ in self._cams]
 
-        sinks = [h264sink, appsink]
+        for cf in conv_cfs:
+            cf.set_property(
+                "caps",
+                Gst.Caps.from_string(
+                    "video/x-raw, format=(string)RGBA"
+                ),  # NOTE: make parametric? i.e. height=1080, width=1920
+            )
 
-        for el in [cam, nvvidconv, nvvidconv_cf, tee, *sinks]:
+        tees = [_make_element_safe("tee") for _ in self._cams]
+        h264sinks = [
+            make_nvenc_bin_no_ds(f"/home/nx/logs/videos/jetvision-singlecam-{c}.mkv")
+            for c in self._cams
+        ]
+        self._appsinks = appsinks = [make_appsink_configured() for _ in self._cams]
+
+        for el in [*cameras, *convs, *conv_cfs, *tees, *h264sinks, *appsinks]:
             pipeline.add(el)
 
-        cam.link(nvvidconv)
-        nvvidconv.link(nvvidconv_cf)
-        nvvidconv_cf.link(tee)
+        for cam, conv in zip(cameras, convs):
+            print(cam, conv)
+            cam.link(conv)
 
-        for idx, sink in enumerate(sinks):
-            # Use queues for each sink. This ensures the sinks can execute in separate threads
-            queue = _make_element_safe("queue")
-            pipeline.add(queue)
-            # tee.src_%d -> queue
-            srcpad_or_none = tee.get_request_pad(f"src_{idx}")
-            sinkpad_or_none = queue.get_static_pad("sink")
-            srcpad = _sanitize(srcpad_or_none)
-            sinkpad = _sanitize(sinkpad_or_none)
-            srcpad.link(sinkpad)
-            # queue -> sink
-            queue.link(sink)
+        for conv, cf in zip(convs, conv_cfs):
+            conv.link(cf)
 
-        nvvidconv.link(nvvidconv_cf)
-        nvvidconv_cf.link(appsink)
+        for cf, tee in zip(conv_cfs, tees):
+            cf.link(tee)
+
+        for (tee, enc, app) in zip(tees, h264sinks, appsinks):
+
+            for idx, sink in enumerate([enc, app]):
+                # Use queues for each sink. This ensures the sinks can execute in separate threads
+                queue = _make_element_safe("queue")
+                pipeline.add(queue)
+                # tee.src_%d -> queue
+                srcpad_or_none = tee.get_request_pad(f"src_{idx}")
+                sinkpad_or_none = queue.get_static_pad("sink")
+                srcpad = _sanitize(srcpad_or_none)
+                sinkpad = _sanitize(sinkpad_or_none)
+                srcpad.link(sinkpad)
+                # queue -> sink
+                queue.link(sink)
 
         return pipeline
 
     def read(self):
-        sample = self._appsink.emit("pull-sample")
+        sample = self._appsinks[0].emit("pull-sample")
         buf = sample.get_buffer()
         # (result, mapinfo) = buf.map(Gst.MapFlags.READ)
         buf2 = buf.extract_dup(0, buf.get_size())
