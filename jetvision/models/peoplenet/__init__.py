@@ -1,6 +1,7 @@
 # Here we do lazy loading of the model weights
 
 import os
+
 from .peoplenet import PeopleNet
 
 FILEPATH = os.path.abspath(__file__)

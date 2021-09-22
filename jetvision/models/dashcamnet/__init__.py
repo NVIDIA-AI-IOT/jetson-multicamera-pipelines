@@ -1,4 +1,5 @@
 import os
+
 from .dashcamnet import DashCamNet
 
 FILEPATH = os.path.abspath(__file__)

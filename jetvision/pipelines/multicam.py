@@ -11,12 +11,8 @@ gi.require_version("Gst", "1.0")
 from gi.repository import Gst
 
 from ..gstutils import _make_element_safe, _sanitize
-from .bins import (
-    make_argus_camera_configured,
-    make_nvenc_bin_no_ds,
-)
-
 from .basepipeline import BasePipeline
+from .bins import make_argus_camera_configured, make_nvenc_bin_no_ds
 
 
 def make_conv_bin(caps="video/x-raw, format=(string)RGBA") -> Gst.Bin:

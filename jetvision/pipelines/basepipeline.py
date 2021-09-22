@@ -1,5 +1,5 @@
-import time
 import logging
+import time
 from threading import Thread
 
 # Gstreamer imports
