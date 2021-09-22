@@ -29,7 +29,7 @@ class CameraPipelineDNN(BasePipeline):
         if model_intervals is None:
             model_intervals = [0 for _ in models]
 
-        self._model_intervals =  model_intervals
+        self._model_intervals = model_intervals
 
         if len(self._m) != len(self._model_intervals):
             raise ValueError("len(model_intervals) must be equal to len(models)!")
@@ -39,7 +39,7 @@ class CameraPipelineDNN(BasePipeline):
         self.images = [np.empty((1080, 1920, 3)) for _ in range(0, N_CAMS)]
         self.detections = [[] for _ in range(0, N_CAMS)]  # dets for each camera
         self.frame_n = [-1 for _ in range(0, N_CAMS)]
-        self.det_n= [-1 for _ in range(0, N_CAMS)]
+        self.det_n = [-1 for _ in range(0, N_CAMS)]
 
         super().__init__(**kwargs)
 
@@ -84,7 +84,7 @@ class CameraPipelineDNN(BasePipeline):
         for m_path, nvinf, interval in zip(model_list, nvinfers, self._model_intervals):
             nvinf.set_property("config-file-path", m_path)
             nvinf.set_property("batch-size", n_cams)
-            nvinf.set_property("interval", interval) # to infer every n batches
+            nvinf.set_property("interval", interval)  # to infer every n batches
 
         # nvvideoconvert -> nvdsosd -> nvegltransform -> sink
         nvvidconv = _make_element_safe("nvvideoconvert")
@@ -110,7 +110,9 @@ class CameraPipelineDNN(BasePipeline):
         sinks = []
         if save_video:
             ts = time.strftime("%Y-%m-%dT%H-%M-%S%z")
-            encodebin = make_nvenc_bin(filepath=save_video_folder + f"/jetvision{ts}.mkv")
+            encodebin = make_nvenc_bin(
+                filepath=save_video_folder + f"/jetvision{ts}.mkv"
+            )
             sinks.append(encodebin)
         if display:
             overlay = _make_element_safe("nvoverlaysink")
@@ -260,10 +262,9 @@ class CameraPipelineDNN(BasePipeline):
                 conf = obj_meta.confidence
                 label = obj_meta.obj_label
 
-                detections.append({
-                    "class": label,
-                    "position": position,
-                    "confidence": conf})
+                detections.append(
+                    {"class": label, "position": position, "confidence": conf}
+                )
 
                 obj_meta.rect_params.border_color.set(0.0, 1.0, 0.0, 0.0)
 
@@ -285,5 +286,5 @@ class CameraPipelineDNN(BasePipeline):
 
     def fps(self):
         t = self.elapsed_time()
-        fps_list = [cnt/t for cnt in self.frame_n]
+        fps_list = [cnt / t for cnt in self.frame_n]
         return fps_list
