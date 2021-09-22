@@ -135,25 +135,20 @@ class CameraPipeline(BasePipeline):
 
         return pipeline
 
-    def read(self):
-        sample = self._appsinks[0].emit("pull-sample")
+    def read(self, cam_idx):
+        """
+        Returns np.array or None
+        """
+        sample = self._appsinks[cam_idx].emit("pull-sample")
+        if sample is None:
+            return None
         buf = sample.get_buffer()
-        # (result, mapinfo) = buf.map(Gst.MapFlags.READ)
         buf2 = buf.extract_dup(0, buf.get_size())
-        # arr = np.frombuffer(buf2)
-
-        print(buf.pts, buf.dts, buf.offset)
-
+        # Get W, H, C:
         caps_format = sample.get_caps().get_structure(0)  # Gst.Structure
-        print(caps_format.get_value("format"))
-
-        # GstVideo.VideoFormat
-
         w, h = caps_format.get_value("width"), caps_format.get_value("height")
-        c = 4
-
-        buf_size = buf.get_size()
-
+        c = 4  # Earlier we converted to RGBA
+        # To check format: print(caps_format.get_value("format"))
         arr = np.ndarray(shape=(h, w, c), buffer=buf2, dtype=np.uint8)
 
         return arr
