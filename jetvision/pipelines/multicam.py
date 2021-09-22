@@ -22,12 +22,6 @@ from .bins import (
 from .basepipeline import BasePipeline
 
 
-def on_buffer():
-    print("test")
-
-    return Gst.FlowReturn.OK
-
-
 def make_conv_bin(caps="video/x-raw, format=(string)RGBA") -> Gst.Bin:
     bin = Gst.Bin()
 
@@ -59,7 +53,6 @@ def make_appsink_configured() -> Gst.Element:
     appsink = _make_element_safe("appsink")
     appsink.set_property("max-buffers", 1)
     appsink.set_property("drop", True)
-    # appsink.connect("new-sample", on_buffer, None)
     return appsink
 
 
