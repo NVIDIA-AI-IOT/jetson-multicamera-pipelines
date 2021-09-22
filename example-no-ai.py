@@ -4,9 +4,9 @@ from jetvision import CameraPipeline
 
 if __name__ == "__main__":
 
-    p = CameraPipeline([2,5,8])
+    p = CameraPipeline([2, 5, 8])
 
-    while True:
+    while p.running():
         arr = p.read(0)
         if arr is not None:
             print(arr.shape)
