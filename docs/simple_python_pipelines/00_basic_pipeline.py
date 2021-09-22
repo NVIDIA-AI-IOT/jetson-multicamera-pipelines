@@ -1,9 +1,11 @@
 import gi
+import sys
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
-from gstutils import _make_element_safe, _sanitize
+sys.path.append("../..")
+from jetvision.gstutils import _make_element_safe, _sanitize
 
 # Standard GStreamer initialization
 GObject.threads_init()
