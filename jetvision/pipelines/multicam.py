@@ -8,14 +8,11 @@ import gi
 import numpy as np
 
 gi.require_version("Gst", "1.0")
-from gi.repository import GObject, Gst
+from gi.repository import Gst
 
-from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
+from ..gstutils import _make_element_safe, _sanitize
 from .bins import (
-    make_nvenc_bin,
     make_argus_camera_configured,
-    make_v4l2_cam_bin,
-    make_argus_cam_bin,
     make_nvenc_bin_no_ds,
 )
 
@@ -57,30 +54,23 @@ def make_appsink_configured() -> Gst.Element:
 
 
 class CameraPipeline(BasePipeline):
-    def __init__(self, cameras, **kwargs):
+    def __init__(self, cameras, logdir="/home/nx/logs/videos", **kwargs):
         """
-        models parameter can be:
-        - `dict`: mapping of models->sensor-ids to infer on
-        - `list`: list of models to use on frames from all cameras
+        cameras: list of sensor ids for argus cameras
         """
-
-        save_h264_path = "/home/nx/logs/videos"
-        os.makedirs(save_h264_path, exist_ok=True)
-
         self._cams = cameras
-
+        self._logdir = logdir
+        os.makedirs(self._logdir, exist_ok=True)
         super().__init__(**kwargs)
 
     def _create_pipeline(self):
 
         pipeline = _sanitize(Gst.Pipeline())
-
         cameras = [
             make_argus_camera_configured(c, bufapi_version=0) for c in self._cams
         ]
-        # convs = [make_conv_bin() for _ in self._cams]
-        convs = [_make_element_safe("nvvidconv") for _ in self._cams]
 
+        convs = [_make_element_safe("nvvidconv") for _ in self._cams]
         conv_cfs = [_make_element_safe("capsfilter") for _ in self._cams]
 
         for cf in conv_cfs:
@@ -88,12 +78,13 @@ class CameraPipeline(BasePipeline):
                 "caps",
                 Gst.Caps.from_string(
                     "video/x-raw, format=(string)RGBA"
-                ),  # NOTE: make parametric? i.e. height=1080, width=1920
+                ),  # NOTE: This could be parametric. I.e. height=1080, width=1920
             )
 
         tees = [_make_element_safe("tee") for _ in self._cams]
+        ts = time.strftime("%Y-%m-%dT%H-%M-%S%z")
         h264sinks = [
-            make_nvenc_bin_no_ds(f"/home/nx/logs/videos/jetvision-singlecam-{c}.mkv")
+            make_nvenc_bin_no_ds(f"{self._logdir}/jetvision-{ts}-cam{c}.mkv")
             for c in self._cams
         ]
         self._appsinks = appsinks = [make_appsink_configured() for _ in self._cams]
