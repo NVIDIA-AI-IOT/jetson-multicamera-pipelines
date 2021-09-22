@@ -6,7 +6,7 @@ tlt-model-key=tlt_encode
 tlt-encoded-model=./dashcamnet_pruned_v1.0/resnet18_dashcamnet_pruned.etlt
 labelfile-path=./dashcamnet_pruned_v1.0/labels.txt
 int8-calib-file=./dashcamnet_pruned_v1.0/dashcamnet_int8.txt
-model-engine-file=./tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt_b3_gpu0_int8.engine
+model-engine-file=./dashcamnet_pruned_v1.0/resnet18_dashcamnet_pruned.etlt_b3_gpu0_int8.engine
 infer-dims=3;544;960
 uff-input-blob-name=input_1
 process-mode=1
@@ -19,7 +19,7 @@ gie-unique-id=1
 output-blob-names=output_bbox/BiasAdd;output_cov/Sigmoid
 
 [class-attrs-all]
-pre-cluster-threshold=0.4
+pre-cluster-threshold=0.3
 ## Set eps=0.7 and minBoxes for cluster-mode=1(DBSCAN)
 eps=0.7
 minBoxes=1

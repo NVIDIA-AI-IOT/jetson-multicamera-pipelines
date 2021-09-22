@@ -5,7 +5,7 @@ net-scale-factor=0.0039215697906911373
 tlt-model-key=tlt_encode
 tlt-encoded-model=./tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt
 labelfile-path=./tlt_peoplenet_pruned_v2.0/labels.txt
-model-engine-file=./tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt_b3_gpu0_fp16.engine
+model-engine-file=./tlt_peoplenet_pruned_v2.0/resnet18_peoplenet_pruned.etlt_b3_gpu0_int8.engine
 infer-dims=3;544;960
 uff-input-blob-name=input_1
 batch-size=3
@@ -20,7 +20,7 @@ gie-unique-id=1
 output-blob-names=output_bbox/BiasAdd;output_cov/Sigmoid
 
 [class-attrs-all]
-pre-cluster-threshold=0.4
+pre-cluster-threshold=0.5
 ## Set eps=0.7 and minBoxes for cluster-mode=1(DBSCAN)
 eps=0.7
 minBoxes=1
