@@ -39,10 +39,10 @@ class BasePipeline(Thread):
         self._p.set_state(Gst.State.PLAYING)
         try:
             self._mainloop.run()
-            # TODO: proably some event to stop this thread?
-        except KeyboardInterrupt as e:
-            print(e)
+        except KeyboardInterrupt:
+            pass
         finally:
+            self._mainloop.quit()
             self._p.set_state(Gst.State.NULL)
 
     def stop(self):
