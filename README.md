@@ -2,7 +2,8 @@
 
 Realtime CV/AI pipelines on Nvidia Jetson Platform.
 
-https://user-images.githubusercontent.com/26127866/131947398-59a12a95-82f6-4b48-8af7-34a325f0c0f4.mp4
+https://user-images.githubusercontent.com/26127866/134721058-8378697f-bbf0-4505-be75-f3dba3080c71.mp4
+
 
 ## Quickstart
 
