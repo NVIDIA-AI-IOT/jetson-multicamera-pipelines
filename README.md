@@ -56,7 +56,7 @@ if __name__ == "__main__":
 | 4.  | Same as _#3_ with CPU @ 1.9GHz         | 3      | 45%                         | 54%                            | 99%          | <3%   | 68%        | 10.4w      | DLA0: PeopleNet DLA1: DashCamNet                               |
 | 5.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5      | 57%                         | 70%                            | 127%         | <3%   | 45%        | 9.1W       | DLA0: PeopleNet _(interval=1)_ DLA1: DashCamNet _(interval=1)_ |
 | 6.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5      | 50%                         | 70%                            | 120%         | <3%   | 25%        | 7.5W       | DLA0: PeopleNet _(interval=6)_ DLA1: DashCamNet _(interval=6)_ |
-| 7.  | 3xGMSL -> 2xDNNs + disp + encode       | 5      | 62%                         | 77%                            | 139%         | 99%   | 25%        | 15W        | GPU: PeopleNet                                                 |
+| 7.  | 3xGMSL -> DNN + disp + encode       | 5      | 62%                         | 77%                            | 139%         | 99%   | 25%        | 15W        | GPU: PeopleNet                                                 |
 
 
 Notes:
