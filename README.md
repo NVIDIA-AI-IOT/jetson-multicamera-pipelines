@@ -49,23 +49,23 @@ if __name__ == "__main__":
 
 ## Benchmarks
 
-| #   | Scenario                               | # cams | JetVision<br>CPU core util. | argus-deamon<br>CPU core util. | CPU<br>total | GPU % | EMC util % | Power draw | Inference Hardware                                             |
-| --- | -------------------------------------- | ------ | --------------------------- | ------------------------------ | ------------ | ----- | ---------- | ---------- | -------------------------------------------------------------- |
-| 1.  | 1xGMSL -> 2xDNNs + disp + encode       | 1      | 32%                         | 24%                            | 56%          | <3%   | 57%        | 8.5W       | DLA0: PeopleNet DLA1: DashCamNet                               |
-| 2.  | 2xGMSL -> 2xDNNs + disp + encode       | 2      | 43%                         | 46%                            | 89%          | <3%   | 62%        | 9.4W       | DLA0: PeopleNet DLA1: DashCamNet                               |
-| 3.  | 3xGMSL -> 2xDNNs + disp + encode       | 3      | 55%                         | 70%                            | 125%         | <3%   | 68%        | 10.1W      | DLA0: PeopleNet DLA1: DashCamNet                               |
-| 4.  | Same as _#3_ with CPU @ 1.9GHz         | 3      | 45%                         | 54%                            | 99%          | <3%   | 68%        | 10.4w      | DLA0: PeopleNet DLA1: DashCamNet                               |
-| 5.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5      | 57%                         | 70%                            | 127%         | <3%   | 45%        | 9.1W       | DLA0: PeopleNet _(interval=1)_ DLA1: DashCamNet _(interval=1)_ |
-| 6.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5      | 50%                         | 70%                            | 120%         | <3%   | 25%        | 7.5W       | DLA0: PeopleNet _(interval=6)_ DLA1: DashCamNet _(interval=6)_ |
-| 7.  | 3xGMSL -> DNN + disp + encode       | 5      | 62%                         | 77%                            | 139%         | 99%   | 25%        | 15W        | GPU: PeopleNet                                                 |
+| #   | Scenario                               | # cams | CPU util. <br> (JetVision) | CPU util. <br> (nvargus-deamon) | CPU<br>total | GPU % | EMC util % | Power draw | Inference Hardware                                             |
+| --- | -------------------------------------- | ------ | -------------------------- | ------------------------------- | ------------ | ----- | ---------- | ---------- | -------------------------------------------------------------- |
+| 1.  | 1xGMSL -> 2xDNNs + disp + encode       | 1      | 5.3%                       | 4%                              | 9.3%         | <3%   | 57%        | 8.5W       | DLA0: PeopleNet DLA1: DashCamNet                               |
+| 2.  | 2xGMSL -> 2xDNNs + disp + encode       | 2      | 7.2%                       | 7.7%                            | 14.9%        | <3%   | 62%        | 9.4W       | DLA0: PeopleNet DLA1: DashCamNet                               |
+| 3.  | 3xGMSL -> 2xDNNs + disp + encode       | 3      | 9.2%                       | 11.3%                           | 20.5%        | <3%   | 68%        | 10.1W      | DLA0: PeopleNet DLA1: DashCamNet                               |
+| 4.  | Same as _#3_ with CPU @ 1.9GHz         | 3      | 7.5%                       | 9.0%                            | 16.5%        | <3%   | 68%        | 10.4w      | DLA0: PeopleNet DLA1: DashCamNet                               |
+| 5.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5      | 9.5%                       | 11.3%                           | 20.8%        | <3%   | 45%        | 9.1W       | DLA0: PeopleNet _(interval=1)_ DLA1: DashCamNet _(interval=1)_ |
+| 6.  | 3xGMSL+2xV4L -> 2xDNNs + disp + encode | 5      | 8.3%                       | 11.3%                           | 19.6%        | <3%   | 25%        | 7.5W       | DLA0: PeopleNet _(interval=6)_ DLA1: DashCamNet _(interval=6)_ |
+| 7.  | 3xGMSL -> DNN + disp + encode          | 5      | 10.3%                      | 12.8%                           | 23.1%        | 99%   | 25%        | 15W        | GPU: PeopleNet                                                 |
 
 
 Notes:
-- All CPU numers are per-CPU core. For example, the `45%` for JetVision process in Scenario 4. means we use `45%/6=7.5%` of the entire CPU.
+- All figures are in `15W 6 core mode`. To reproduce do: `sudo nvpmodel -m 2; sudo jetson_clocks;`
+- Test platform: [Jetson Xavier NX](https://developer.nvidia.com/embedded/jetson-xavier-nx-devkit) and [XNX Box](https://www.leopardimaging.com/product/nvidia-jetson-cameras/nvidia-nx-mipi-camera-kits/li-xnx-box-gmsl2/) running [JetPack](https://developer.nvidia.com/embedded/jetpack) v4.5.1
 - The residual GPU usage in DLA-accelerated nets is caused by Sigmoid activations being computed with CUDA backend. Remaining layers are computed on DLA.
 - CPU usage will vary depending on factors such as camera resolution, framerate, available video formats and driver implementation.
-- When reproducing results do: `sudo nvpmodel -m 2; sudo jetson_clocks;`
-- Test platform: [Jetson Xavier NX](https://developer.nvidia.com/embedded/jetson-xavier-nx-devkit) and [XNX Box](https://www.leopardimaging.com/product/nvidia-jetson-cameras/nvidia-nx-mipi-camera-kits/li-xnx-box-gmsl2/) running [JetPack](https://developer.nvidia.com/embedded/jetpack) v4.5.1
+
 
 
 ## More 
