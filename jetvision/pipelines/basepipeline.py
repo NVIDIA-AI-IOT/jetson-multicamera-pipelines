@@ -1,6 +1,5 @@
 import logging
 import time
-from threading import Thread
 
 # Gstreamer imports
 import gi
@@ -11,10 +10,8 @@ from gi.repository import GObject, Gst
 from ..utils.gst import _err_if_none, _make_element_safe, _sanitize, bus_call
 
 
-class BasePipeline(Thread):
+class BasePipeline:
     def __init__(self, **kwargs):
-
-        super().__init__()
 
         # Gstreamer init
         GObject.threads_init()
@@ -30,20 +27,23 @@ class BasePipeline(Thread):
         self._bus.add_signal_watch()
         self._bus.connect("message", bus_call, self._mainloop)
 
-        self.start()
+        # self.start()
+        self._p.set_state(Gst.State.PLAYING)
         self.wait_ready()
         self._start_ts = time.perf_counter()
 
-    def run(self):
+    # def run(self):
 
-        self._p.set_state(Gst.State.PLAYING)
-        try:
-            self._mainloop.run()
-        except KeyboardInterrupt:
-            pass
-        finally:
-            self._mainloop.quit()
-            self._p.set_state(Gst.State.NULL)
+    #     try:
+    #         self._mainloop.run()
+    #     except KeyboardInterrupt:
+    #         pass
+    #     finally:
+    #         self._mainloop.quit()
+    #         self._p.set_state(Gst.State.NULL)
+
+    def __del__(self):
+        self.stop()
 
     def stop(self):
         self._p.set_state(Gst.State.NULL)
