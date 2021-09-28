@@ -9,9 +9,10 @@ import pyds
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst
 
-from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
 from .basepipeline import BasePipeline
-from .bins import make_argus_cam_bin, make_nvenc_bin, make_v4l2_cam_bin
+from ..utils.gst import _err_if_none, _make_element_safe, _sanitize, bus_call
+from ..bins.cameras import make_argus_cam_bin, make_v4l2_cam_bin
+from ..bins.encoders import make_nvenc_bin
 
 
 class CameraPipelineDNN(BasePipeline):

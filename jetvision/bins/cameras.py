@@ -3,7 +3,7 @@ import gi
 gi.require_version("Gst", "1.0")
 from gi.repository import Gst
 
-from ..gstutils import _make_element_safe, _sanitize
+from ..utils.gst import _make_element_safe, _sanitize
 
 
 def make_argus_camera_configured(sensor_id, bufapi_version=1) -> Gst.Element:

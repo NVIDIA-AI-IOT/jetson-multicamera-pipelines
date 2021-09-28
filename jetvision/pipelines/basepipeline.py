@@ -8,7 +8,7 @@ import gi
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
 
-from ..gstutils import _err_if_none, _make_element_safe, _sanitize, bus_call
+from ..utils.gst import _err_if_none, _make_element_safe, _sanitize, bus_call
 
 
 class BasePipeline(Thread):
