@@ -18,6 +18,7 @@ def make_argus_camera_configured(sensor_id, bufapi_version=1) -> Gst.Element:
     cam.set_property("aeantibanding", 3)  # 3=60Hz, 2=50Hz, 1=auto, 0=off
     cam.set_property("tnr-mode", 0)
     cam.set_property("ee-mode", 0)
+    cam.set_property("silent", True)
 
     return cam
 
