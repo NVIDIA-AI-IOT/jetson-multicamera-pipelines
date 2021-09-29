@@ -32,20 +32,15 @@ class BasePipeline:
         self.wait_ready()
         self._start_ts = time.perf_counter()
 
-    # def run(self):
-
-    #     try:
-    #         self._mainloop.run()
-    #     except KeyboardInterrupt:
-    #         pass
-    #     finally:
-    #         self._mainloop.quit()
-    #         self._p.set_state(Gst.State.NULL)
-
     def __del__(self):
         self.stop()
 
     def stop(self):
+        self._p.send_event(Gst.Event.new_eos())
+        self._p.set_state(Gst.State.PAUSED)
+        # Sometimes nvargus-deamon will segfault when transitioning nvarguscamerasrc from PAUSED->NULL
+        # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/704#note_947201
+        # https://forums.developer.nvidia.com/t/nvargus-daemon-freeze-hang-on-pipeline-stop-on-r32-1/80849/58
         self._p.set_state(Gst.State.NULL)
 
     def running(self):
