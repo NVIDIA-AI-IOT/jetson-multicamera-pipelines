@@ -16,6 +16,7 @@ def make_nvenc_bin(filepath, bitrate=int(20e6)) -> Gst.Bin:
     enc = _make_element_safe("nvv4l2h264enc")
     enc.set_property("bitrate", bitrate)
     enc.set_property("bufapi-version", 1)
+    enc.set_property("maxperf-enable", True)
 
     # parser, mux
     parser = _make_element_safe("h264parse")
