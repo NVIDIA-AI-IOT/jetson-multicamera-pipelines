@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 import os
 
 FILEPATH = os.path.abspath(__file__)

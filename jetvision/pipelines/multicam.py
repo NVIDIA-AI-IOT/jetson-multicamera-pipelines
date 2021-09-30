@@ -1,4 +1,6 @@
-import logging  # TODO: print -> logging
+# SPDX-License-Identifier: MIT
+
+import logging  # TODO: remove
 import os
 import time
 from threading import Thread
