@@ -11,12 +11,13 @@ Install:
 ```shell
 git clone https://github.com/tomek-l/nv-jetvision.git
 cd nv-jetvision
-bash install-dependencies.sh
+bash scripts/install-dependencies.sh
 pip3 install .
 ```
 Run:
 ```shell
-source exports.sh
+source scripts/env_vars.sh
+cd examples
 python3 example.py
 ```
 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     )
 
     while pipeline.running():
-        arr = pipeline.images[0] # (1080, 1920, 3) np.array (RGB 1080p image)
+        arr = pipeline.images[0] # np.array with shape (1080, 1920, 3), i.e. (1080p RGB image)
         dets = pipeline.detections[0] # Detections from the DNNs
         time.sleep(1/30)
 ```
