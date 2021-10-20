@@ -83,7 +83,7 @@ class CameraPipeline(BasePipeline):
         tees = [_make_element_safe("tee") for _ in self._cams]
         ts = time.strftime("%Y-%m-%dT%H-%M-%S%z")
         h264sinks = [
-            make_nvenc_bin_no_ds(f"{self._logdir}/jetvision-{ts}-cam{c}.mkv")
+            make_nvenc_bin_no_ds(f"{self._logdir}/jetmulticam-{ts}-cam{c}.mkv")
             for c in self._cams
         ]
         self._appsinks = appsinks = [make_appsink_configured() for _ in self._cams]

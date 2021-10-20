@@ -9,7 +9,7 @@ from .pipelines.multicam import CameraPipeline
 from .pipelines.multicamDNN import CameraPipelineDNN
 
 # Setup logging
-log = logging.getLogger("jetvision")
+log = logging.getLogger("jetmulticam")
 log.setLevel(logging.WARN)
 
 # By default stream to stdout

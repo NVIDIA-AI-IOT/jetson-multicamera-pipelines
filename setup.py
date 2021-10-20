@@ -4,23 +4,23 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="jetvision",
-    version="0.0.3",
+    name="jetmulticam",
+    version="0.1.0",
     author="Tomasz Lewicki",
     author_email="tlewicki@nvidia.com",
-    description="jetvision: Computer Vision package for Nvidia Jetson platform",
+    description="JetMutliCam: Easy-to-use realtime CV/AI pipelines for Nvidia Jetson Platform.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/tomek-l/nv-jetvision",
+    url="https://github.com/tomek-l/nv-jetmulticam",
     project_urls={
-        "Bug Tracker": "https://github.com/tomek-l/nv-jetvision/issues",
+        "Bug Tracker": "https://github.com/tomek-l/nv-jetmulticam/issues",
     },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
     ],
     packages=setuptools.find_packages(where="."),
-    package_dir={"jetvision": "jetvision"},
+    package_dir={"jetmulticam": "jetmulticam"},
     include_package_data=True,
     package_data={
         "": ["*.txt"], # For nvinfer config files

@@ -1,9 +1,11 @@
-# JetVision
+# Jetson Multicamera Pipelines
 
-Realtime CV/AI pipelines for Multi-camera Applications on Nvidia Jetson Platform. This project:
-- Provides configurable pipeline abstractions to build end-to-end multicamera applications. For example: `N×(capture)->preprocess->batch->DNN->((insert application logic here))->encode->file I/O + display`
-- Strives to be highly efficient by using Nvidia HW accleration. You can run `2 × DNNs` for object detection on  `3 × 1080p` real-time camera streams using as little as `16.5%` CPU and virtually no GPU. See benchmarks below for details.
-- Is easy to use and extend. `JetVision` gives you programatic access in python to image data (via `np.array`), as well object detection results.
+Easy-to-use realtime CV/AI pipelines for Nvidia Jetson Platform. 
+
+This project:
+- Provides configurable pipeline abstractions to build end-to-end multicamera applications. A typical pipeline performs: `N×(capture)->preprocess->batch->DNN-> <<your application logic here>> ->encode->file I/O + display`
+- Strives to be highly efficient by using Nvidia HW accleration. You can run `2 × DNNs` for object detection on  `3 × 1080p` real-time camera streams using as little as `16.5%` CPU. See benchmarks below for details.
+- Is easy to use and extend. `jetmulticam` gives you programatic access in python to image data (via `np.array`), as well object detection results.
 
 ## Demos
 
@@ -26,12 +28,12 @@ https://user-images.githubusercontent.com/26127866/134721058-8378697f-bbf0-4505-
 
 Install:
 ```shell
-git clone https://github.com/tomek-l/nv-jetvision.git
-cd nv-jetvision
+git clone https://github.com/tomek-l/nv-jetmulticam.git
+cd nv-jetmulticam
 bash scripts/install-dependencies.sh
 pip3 install .
 ```
-Run:
+Run examples:
 ```shell
 source scripts/env_vars.sh
 cd examples
@@ -42,8 +44,8 @@ python3 example.py
 
 ```python
 import time
-from jetvision import CameraPipelineDNN
-from jetvision.models import PeopleNet, DashCamNet
+from jetmulticam import CameraPipelineDNN
+from jetmulticam.models import PeopleNet, DashCamNet
 
 if __name__ == "__main__":
 
@@ -67,7 +69,7 @@ if __name__ == "__main__":
 
 ## Benchmarks
 
-| #   | Scenario                               | # cams | CPU util. <br> (JetVision) | CPU util. <br> (nvargus-deamon) | CPU<br>total | GPU % | EMC util % | Power draw | Inference Hardware                                             |
+| #   | Scenario                               | # cams | CPU util. <br> (jetmulticam) | CPU util. <br> (nvargus-deamon) | CPU<br>total | GPU % | EMC util % | Power draw | Inference Hardware                                             |
 | --- | -------------------------------------- | ------ | -------------------------- | ------------------------------- | ------------ | ----- | ---------- | ---------- | -------------------------------------------------------------- |
 | 1.  | 1xGMSL -> 2xDNNs + disp + encode       | 1      | 5.3%                       | 4%                              | 9.3%         | <3%   | 57%        | 8.5W       | DLA0: PeopleNet DLA1: DashCamNet                               |
 | 2.  | 2xGMSL -> 2xDNNs + disp + encode       | 2      | 7.2%                       | 7.7%                            | 14.9%        | <3%   | 62%        | 9.4W       | DLA0: PeopleNet DLA1: DashCamNet                               |

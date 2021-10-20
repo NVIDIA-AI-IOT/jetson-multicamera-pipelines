@@ -23,7 +23,7 @@ class BasePipeline:
         self._mainloop = GObject.MainLoop()
 
         self._p = self._create_pipeline(**kwargs)
-        self._log = logging.getLogger("jetvision")
+        self._log = logging.getLogger("jetmulticam")
 
         self._bus = self._p.get_bus()
         self._bus.add_signal_watch()

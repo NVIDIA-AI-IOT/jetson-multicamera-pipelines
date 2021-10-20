@@ -1,6 +1,6 @@
 import time
 
-from jetvision import CameraPipeline
+from jetmulticam import CameraPipeline
 
 if __name__ == "__main__":
 

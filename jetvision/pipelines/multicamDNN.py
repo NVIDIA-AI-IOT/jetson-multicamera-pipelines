@@ -114,7 +114,7 @@ class CameraPipelineDNN(BasePipeline):
         if save_video:
             ts = time.strftime("%Y-%m-%dT%H-%M-%S%z")
             encodebin = make_nvenc_bin(
-                filepath=save_video_folder + f"/jetvision{ts}.mkv"
+                filepath=save_video_folder + f"/jetmulticam{ts}.mkv"
             )
             sinks.append(encodebin)
         if display:

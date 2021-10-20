@@ -1,6 +1,6 @@
 import time
-from jetvision import CameraPipelineDNN
-from jetvision.models import PeopleNet, DashCamNet
+from jetmulticam import CameraPipelineDNN
+from jetmulticam.models import PeopleNet, DashCamNet
 
 if __name__ == "__main__":
 
