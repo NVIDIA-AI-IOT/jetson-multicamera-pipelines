@@ -2,7 +2,7 @@ import gi
 
 gi.require_version("Gst", "1.0")
 from gi.repository import GObject, Gst
-from jetvision.gstutils import _make_element_safe, _sanitize
+from jetmulticam.gstutils import _make_element_safe, _sanitize
 
 
 def make_nvenc_bin() -> Gst.Bin:
