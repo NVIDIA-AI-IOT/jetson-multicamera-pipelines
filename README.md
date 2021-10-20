@@ -3,13 +3,16 @@
 Easy-to-use realtime CV/AI pipelines for Nvidia Jetson Platform. 
 
 This project:
-- Provides configurable pipeline abstractions to build end-to-end multicamera applications. A typical pipeline performs: `N×(capture)->preprocess->batch->DNN-> <<your application logic here>> ->encode->file I/O + display`
-- Strives to be highly efficient by using Nvidia HW accleration. You can run `2 × DNNs` for object detection on  `3 × 1080p` real-time camera streams using as little as `16.5%` CPU. See benchmarks below for details.
-- Is easy to use and extend. `jetmulticam` gives you programatic access in python to image data (via `np.array`), as well object detection results.
+- Builds a typical multi-camera pipeline under-the-hood, i.e. `N×(capture)->preprocess->batch->DNN-> <<your application logic here>> ->encode->file I/O + display`
+- Gives programatic acces to configure the pipeline in python via `jetmulticam` package.
+- Utilizes Nvidia HW accleration. You can perform object detection in real-time on 6 camera streams using as little as `16.5%` CPU. See benchmarks below for details.
 
 ## Demos
 
-_All demos are performed in real-time onboard the robot._
+You can easily build your custom logic in python by accessing image data (via `np.array`), as well object detection results.
+See examples of person following below:
+
+_(All demos are performed in real-time onboard the robot)_
 
 DashCamNet _(DLA0, Red Boxes)_ + PeopleNet _(DLA1, Green Boxes)_ on an autonomous (person following) robot:
 
