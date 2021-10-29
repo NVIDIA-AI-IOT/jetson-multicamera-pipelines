@@ -19,10 +19,12 @@ https://user-images.githubusercontent.com/26127866/134718385-9861c206-d5f9-4f67-
 
 #### PeopleNet (GPU) on 3 cameras streams.
 Robot is operated in manual mode.
+
 https://user-images.githubusercontent.com/26127866/134720518-bbb98c86-71b0-46ee-a3d1-e2d65acc1b4c.mp4
 
 #### DashCamNet (GPU) on 3 camera streams.
 Robot is operated in manual mode.
+
 https://user-images.githubusercontent.com/26127866/134721058-8378697f-bbf0-4505-be75-f3dba3080c71.mp4
 
 (All demos are performed in real-time onboard Nvidia Jetson Xavier NX)
