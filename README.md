@@ -1,7 +1,7 @@
 # Jetson Multicamera Pipelines
 
 Easy-to-use realtime CV/AI pipelines for Nvidia Jetson Platform. This project:
-- Builds a typical multi-camera pipeline under-the-hood, i.e. `N×(capture)->preprocess->batch->DNN-> <<your application logic here>> ->encode->file I/O + display`
+- Builds a typical multi-camera pipeline, i.e. `N×(capture)->preprocess->batch->DNN-> <<your application logic here>> ->encode->file I/O + display`. Uses `gstreamer` and `deepstream`  under-the-hood.
 - Gives programatic acces to configure the pipeline in python via `jetmulticam` package.
 - Utilizes Nvidia HW accleration for minimal CPU usage. For example, you can perform object detection in real-time on 6 camera streams using as little as `16.5%` CPU. See benchmarks below for details.
 
