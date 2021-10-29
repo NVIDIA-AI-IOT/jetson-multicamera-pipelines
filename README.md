@@ -10,7 +10,7 @@ Easy-to-use realtime CV/AI pipelines for Nvidia Jetson Platform. This project:
 You can easily build your custom logic in python by accessing image data (via `np.array`), as well object detection results.
 See examples of person following below:
 
-#### DashCamNet _(DLA0)_ + PeopleNet _(DLA1)_.
+#### DashCamNet _(DLA0)_ + PeopleNet _(DLA1)_ on 3 camera streams.
 We have 3 intependent cameras with ~270° field of view.
 Red Boxes correspond to DashCamNet detections, green ones to PeopleNet.
 The PeopleNet detections are used to perform person following logic.
