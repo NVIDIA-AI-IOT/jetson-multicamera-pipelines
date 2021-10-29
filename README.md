@@ -10,7 +10,7 @@ Easy-to-use realtime CV/AI pipelines for Nvidia Jetson Platform. This project:
 You can easily build your custom logic in python by accessing image data (via `np.array`), as well object detection results.
 See examples of person following below:
 
-_(All demos are performed in real-time onboard the robot)_
+_(All demos are performed in real-time onboard Nvidia Jetson Xavier NX)_
 
 #### DashCamNet _(DLA0, Red Boxes)_ + PeopleNet _(DLA1, Green Boxes)_ on an autonomous (person following) robot:
 
