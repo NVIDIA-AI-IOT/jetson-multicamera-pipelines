@@ -35,7 +35,7 @@ Install:
 ```shell
 git clone https://github.com/NVIDIA-AI-IOT/jetson-multicamera-pipelines.git
 cd jetson-multicamera-pipelines
-bash scripts/install-dependencies.sh
+bash scripts/install_dependencies.sh
 pip3 install .
 ```
 Run example with your cameras:
