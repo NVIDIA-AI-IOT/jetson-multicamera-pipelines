@@ -4,7 +4,7 @@ from jetmulticam import CameraPipeline
 
 if __name__ == "__main__":
 
-    p = CameraPipeline([0, 1])
+    p = CameraPipeline(["/dev/video0", "/dev/video1"])
 
     print(p.running())
 

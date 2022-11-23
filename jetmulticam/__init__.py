@@ -6,7 +6,7 @@ import sys
 
 # Expose top-level API for the package
 from .pipelines.multicam import CameraPipeline
-from .pipelines.multicamDNN import CameraPipelineDNN
+# from .pipelines.multicamDNN import CameraPipelineDNN
 
 # Setup logging
 log = logging.getLogger("jetmulticam")

@@ -29,7 +29,6 @@ class BasePipeline:
         self._bus.add_signal_watch()
         self._bus.connect("message", bus_call, self._mainloop)
 
-        # self.start()
         self._p.set_state(Gst.State.PLAYING)
         self.wait_ready()
         self._start_ts = time.perf_counter()

@@ -59,7 +59,7 @@ def make_v4l2_cam_bin(dev: str) -> Gst.Bin:
     # Create v4l2 camera
     src = _make_element_safe("v4l2src")
     src.set_property("device", dev)
-    src.set_property("framerate", 30)
+#    src.set_property("framerate", 30)
 
     vidconv = _make_element_safe("videoconvert")
     vidconv_cf = _make_element_safe("capsfilter")

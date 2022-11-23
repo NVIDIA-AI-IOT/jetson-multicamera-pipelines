@@ -14,8 +14,7 @@ from gi.repository import Gst
 
 from .basepipeline import BasePipeline
 from ..utils.gst import _make_element_safe, _sanitize
-from ..bins.cameras import make_argus_camera_configured
-from ..bins.encoders import make_nvenc_bin_no_ds
+from ..bins.cameras import make_v4l2_cam_bin
 
 
 def make_conv_bin(caps="video/x-raw, format=(string)RGBA") -> Gst.Bin:
@@ -53,7 +52,7 @@ def make_appsink_configured() -> Gst.Element:
 
 
 class CameraPipeline(BasePipeline):
-    def __init__(self, cameras, logdir="/home/nx/logs/videos", **kwargs):
+    def __init__(self, cameras, logdir="/home/tng042/logs/videos", **kwargs):
         """
         cameras: list of sensor ids for argus cameras
         """
@@ -66,55 +65,19 @@ class CameraPipeline(BasePipeline):
 
         pipeline = _sanitize(Gst.Pipeline())
         cameras = [
-            make_argus_camera_configured(c, bufapi_version=0) for c in self._cams
+            make_v4l2_cam_bin(c) for c in self._cams
         ]
+        pipeline.add(cameras[0])
+        # self._appsinks = appsinks = [make_appsink_configured() for _ in self._cams]
 
-        convs = [_make_element_safe("nvvidconv") for _ in self._cams]
-        conv_cfs = [_make_element_safe("capsfilter") for _ in self._cams]
+        # for el in [*cameras, *appsinks]:
+        #     pipeline.add(el)
 
-        for cf in conv_cfs:
-            cf.set_property(
-                "caps",
-                Gst.Caps.from_string(
-                    "video/x-raw, format=(string)RGBA"
-                ),  # NOTE: This could be parametric. I.e. height=1080, width=1920
-            )
-
-        tees = [_make_element_safe("tee") for _ in self._cams]
-        ts = time.strftime("%Y-%m-%dT%H-%M-%S%z")
-        h264sinks = [
-            make_nvenc_bin_no_ds(f"{self._logdir}/jetmulticam-{ts}-cam{c}.mkv")
-            for c in self._cams
-        ]
-        self._appsinks = appsinks = [make_appsink_configured() for _ in self._cams]
-
-        for el in [*cameras, *convs, *conv_cfs, *tees, *h264sinks, *appsinks]:
-            pipeline.add(el)
-
-        for cam, conv in zip(cameras, convs):
-            print(cam, conv)
-            cam.link(conv)
-
-        for conv, cf in zip(convs, conv_cfs):
-            conv.link(cf)
-
-        for cf, tee in zip(conv_cfs, tees):
-            cf.link(tee)
-
-        for (tee, enc, app) in zip(tees, h264sinks, appsinks):
-
-            for idx, sink in enumerate([enc, app]):
-                # Use queues for each sink. This ensures the sinks can execute in separate threads
-                queue = _make_element_safe("queue")
-                pipeline.add(queue)
-                # tee.src_%d -> queue
-                srcpad_or_none = tee.get_request_pad(f"src_{idx}")
-                sinkpad_or_none = queue.get_static_pad("sink")
-                srcpad = _sanitize(srcpad_or_none)
-                sinkpad = _sanitize(sinkpad_or_none)
-                srcpad.link(sinkpad)
-                # queue -> sink
-                queue.link(sink)
+        # for app in appsinks:
+        #     # Use queues for each sink. This ensures the sinks can execute in separate threads
+        #     queue = _make_element_safe("queue")
+        #     pipeline.add(queue)
+        #     queue.link(app)
 
         return pipeline
 
