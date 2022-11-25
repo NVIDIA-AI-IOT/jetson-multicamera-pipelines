@@ -67,7 +67,7 @@ def make_v4l2_cam_bin(dev: str) -> Gst.Bin:
     vidconv_cf.set_property(
         "caps",
         Gst.Caps.from_string(
-            "video/x-raw, format=(string)RGBA, framerate=(fraction)30/1"
+            "video/x-raw, format=(string)I420, framerate=(fraction)5/1"
         ),
     )
 

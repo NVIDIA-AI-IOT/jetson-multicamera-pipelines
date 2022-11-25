@@ -13,7 +13,7 @@ gst-launch-1.0 nvarguscamerasrc ! 'video/x-raw(memory:NVMM),  width=(int)1920, h
 
 ## Display single USB camera (xvimagesink)
 ```shell
-gst-launch-1.0 v4l2src device=/dev/video3 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! xvimagesink sync=false
+gst-launch-1.0 v4l2src device=/dev/video0 ! videoconvert ! "video/x-raw, format=(string)RGBA" ! videoconvert ! xvimagesink sync=false
 ```
 
 ## Display single USB camera (nvvideoconvert + nvoverlaysink)
