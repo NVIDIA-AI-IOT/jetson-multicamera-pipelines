@@ -6,6 +6,11 @@
 gst-launch-1.0 nvarguscamerasrc ! 'video/x-raw(memory:NVMM),  width=(int)1920, height=(int)1080, format=(string)NV12,  framerate=(fraction)30/1' ! nvoverlaysink
 ```
 
+## USB JPEG
+```
+gst-launch-1.0 tee name=stream v4l2src device=/dev/video0 ! image/jpeg,width=800,height=600,framerate=30/1 ! jpegparse ! jpegdec ! xvimagesink sync=false  v4l2src device=/dev/video1 ! image/jpeg,width=800,height=600,framerate=30/1 ! jpegparse ! jpegdec ! xvimagesink sync=false
+```
+
 ## Display single camera (windowed)
 ```shell
 gst-launch-1.0 nvarguscamerasrc ! 'video/x-raw(memory:NVMM),  width=(int)1920, height=(int)1080, format=(string)NV12,  framerate=(fraction)30/1' ! nvegltransform ! nveglglessink

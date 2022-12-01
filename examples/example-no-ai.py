@@ -1,5 +1,5 @@
 import time
-
+import threading
 from jetmulticam import CameraPipeline
 
 if __name__ == "__main__":
@@ -8,8 +8,6 @@ if __name__ == "__main__":
 
     print(p.running())
 
-    for _ in range(100):
-        arr = p.read(0)
-        if arr is not None:
-            print(arr.shape)
+    while (True):
+        p.read(0)
         time.sleep(0.1)

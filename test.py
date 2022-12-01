@@ -1,4 +1,7 @@
 import cv2
+import os
+os.environ['DISPLAY'] = ':0'
+
 cap0 = cv2.VideoCapture(0)
 ret0, frame0 = cap0.read()
 
