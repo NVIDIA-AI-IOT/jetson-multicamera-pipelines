@@ -3,7 +3,7 @@
 import logging  # TODO: remove
 import os
 import time
-from threading import Thread
+import multiprocessing as mp
 
 # Gstreamer imports
 import gi
@@ -58,6 +58,9 @@ class CameraPipeline(BasePipeline):
         cameras: list of sensor ids for argus cameras
         """
         self._cams = cameras
+        self._imageCV = [ImageCV(), ImageCV()]
+        self._stitcher = ImageStitcher(self._imageCV)
+        self.sharedMem = mp.SimpleQueue()
         self._logdir = logdir
         os.makedirs(self._logdir, exist_ok=True)
         super().__init__(**kwargs)
@@ -69,32 +72,8 @@ class CameraPipeline(BasePipeline):
             make_v4l2_image(c) for c in self._cams
         ]
 
-        # self._appsinks = appsinks = [make_appsink_configured() for _ in self._cams]
-
         for el in [*cameras]:
             pipeline.add(el)
-
-        # # Create muxer
-        # mux = _make_element_safe("nvstreammux")
-        # mux.set_property("live-source", True)
-        # mux.set_property("width", 1280)
-        # mux.set_property("height", 720)
-        # mux.set_property("sync-inputs", 1)
-        # mux.set_property("batch-size", 5)
-        # mux.set_property("batched-push-timeout", 4000000)
-
-        # pipeline.add(mux)
-        
-        # for (idx, source) in enumerate(cameras):
-        #     srcpad_or_none = source.get_static_pad(f"src")
-        #     sinkpad_or_none = mux.get_request_pad(f"sink_{idx}")
-        #     srcpad = _sanitize(srcpad_or_none)
-        #     sinkpad = _sanitize(sinkpad_or_none)
-        #     srcpad.link(sinkpad)
-        
-        # self._appsinks = appsinks = make_appsink_configured()
-        # pipeline.add(appsinks)
-        # mux.link(appsinks)
 
         self._appsinks = appsinks = [make_appsink_configured() for _ in self._cams]
         for el in [*appsinks]:
@@ -110,44 +89,45 @@ class CameraPipeline(BasePipeline):
         return pipeline
 
     def read(self, cam_idx):
-        """
-        Returns np.array or None
-        """
         sample1 = self._appsinks[0].emit("pull-sample")
         sample2 = self._appsinks[1].emit("pull-sample")
          
         try:
-            image1 = ImageCV(sample1)
-            image2 = ImageCV(sample2)
-            stitcher = ImageStitcher([image1, image2])
-            stitcher.showImage()
+            ##########################################################
+            ############ single thread try ###########################
+            ##########################################################
+
+            # image1 = ImageCV(sample1)
+            # image2 = ImageCV(sample2)
+            # image1.showCVImage()
+            # image2.showCVImage()
+            # stitcher = ImageStitcher([image1, image2])
+            # stitcher.showImage()
+            # self._imageCV[0].updateCVImage(sample1)
+            # self._imageCV[1].updateCVImage(sample2)
+            # self._stitcher.showImage()
+
+            #########################################################
+            ############## multiprocessing implementation ###########
+            #########################################################
+            jobs = []
+            for objectCV,sample in zip(self._imageCV, [sample1,sample2]):
+                p = mp.Process(target=worker, args=(objectCV,sample,self.sharedMem))
+                jobs.append(p)
+                p.start()
+                # p2 = mp.Process(target=worker, args=(self._imageCV[1],sample2,self.sharedMem))
+                # jobs.append(p2)
+                # p2.start()
+
+            # get item out of queue first before deadlock happends
+            buffer = [self.sharedMem.get(), self.sharedMem.get()]
+            for process in jobs:
+                process.join()
+
+            self._stitcher.showImage(buffer)
+            
         except Exception as e:
             print(e)
 
-def getImageBuffer(gstSample):
-    if gstSample is None:
-        return None
-    
-    # get buffer from the Gst.sample object
-    buf = gstSample.get_buffer()
-    buf2 = buf.extract_dup(0, buf.get_size())
-    
-    # Get W, H, C:
-    # caps = sample.get_caps()
-    # caps_format = caps.get_structure(0)  # Gst.Structure
-    # w, h = caps_format.get_value("width"), caps_format.get_value("height")
-    # c = 4  # RGBA format
-    # c = 1.5 # NV12 format
-    
-    # To check format:
-    # print(caps_format.get_value("format"))
-    # print(caps.to_string())
-    # print(caps_format.get_value("format"))
-    # print(caps,"buffer size ",buf.get_size())
-    return buf2
-
-def showIm(buffer):
-    from PIL import Image
-    import io
-    image = Image.open(io.BytesIO(buffer))
-    image.show()
+def worker(CVobject, sample, sharedMem):
+    sharedMem.put(CVobject.updateCVImage(sample))

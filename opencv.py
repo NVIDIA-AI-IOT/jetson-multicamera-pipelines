@@ -1,12 +1,12 @@
 import time
 import cv2
 import threading
-from copy import deepcopy
+import os
 import multiprocessing
 
 
 class camThread():
-    def __init__(self, previewName, camID):
+    def __init__(self, previewName, camID, sharedMem):
         self.previewName = previewName
         self.camID = camID
         self.cam = cv2.VideoCapture(camID)
@@ -16,7 +16,7 @@ class camThread():
         self.cam.set(cv2.CAP_PROP_FPS,30)
         self.condition = threading.Event()
         self.frame = 1
-        self.buffer = None
+        self.sharedMem = sharedMem
         
     def getEvent(self):
         return self.condition
@@ -34,16 +34,14 @@ class camThread():
         self.thread = threading.Thread(target=self.singleThreadGetFrame,args=(),daemon=True)
         self.thread.start()
         self.singleThreadGetFrame()
-        # print(self.frame)
         
     def singleThreadGetFrame(self):
         while True:
-            while not self.condition:
-                # print(" this is in buffer " ,self.buffer)
-                self.condition.wait()
-            rval, self.frame = self.cam.read()
-            # self.buffer = deepcopy(self.frame)
-            # print(rval, "and", self.camID)
+                rval, self.frame = self.cam.read()
+                if (not self.sharedMem.empty()):
+                    self.sharedMem.get()
+
+                self.sharedMem.put(self.frame)
 
     def showFrame(self):
         try:
@@ -53,7 +51,6 @@ class camThread():
             pass
 
     def getFrame(self):
-        # rval, self.frame = self.cam.read()
         return self.frame
 
     def camPreview(self, previewName):
@@ -72,26 +69,20 @@ class camThread():
         cv2.destroyWindow(previewName)
 
 class ImageStitcher():
-    def __init__(self, cameras) -> None:
+    def __init__(self, sharedMems) -> None:
         self.mode = cv2.Stitcher_PANORAMA
-        self.cameras = cameras
-        self.triggers = [i.getEvent() for i in cameras]
-        for i in self.triggers:
-            i.set()
+        self.sharedMems = sharedMems
         self.result = None
 
     def stitch(self):
         imageArray = list()
-        for i in self.triggers: i.clear()
-        for cam in self.cameras:
-            # print(cam)
-            time.sleep(1)
-            print(cam.buffer)
-        
-            imageArray.append(cam.getFrame())
-        for i in self.triggers: i.set()
+
+        for buffer in self.sharedMems:
+            if (not buffer.empty()):
+                imageArray.append(buffer.get())
+
         try:
-            stitchy = cv2.createStitcher(self.mode)
+            stitchy = cv2.createStitcher(try_use_gpu=True)
             (status, self.result) = stitchy.stitch(imageArray)
             if (status == 0):
                 # all okay here
@@ -102,22 +93,22 @@ class ImageStitcher():
                 raise Exception("Error stitching: Homography fail")
         except Exception as e:
             self.result = None
-            print(e)
+            # print(e)
             
     def showImage(self):
         status = self.stitch()
         if (status):
             cv2.imshow("output", self.result)
             cv2.waitKey(10)
-        time.sleep(3)
+        # time.sleep(3)
 
 def func(camObject):
     camObject.run()
     # camObject.singleThreadGetFrame()
 
 
-def imageProcessing(camObjectArray):
-    stitcher = ImageStitcher(camObjectArray)
+def imageProcessing(shareMems):
+    stitcher = ImageStitcher(shareMems)
     while True:
         stitcher.showImage()
 
@@ -146,14 +137,18 @@ if (__name__ == "__main__"):
     # Single threaded test works
     # cameras are not synced
     # singleThreadTest()
+    # os.system("taskset -p -c 0,1,2 {}".format(os.getpid()))
+    # Create shared memory to store frame
+    shareMem1 = multiprocessing.SimpleQueue()
+    shareMem2 = multiprocessing.SimpleQueue()
 
     # Create two threads as follows
-    thread1 = camThread("Camera 0", 0)
-    thread2 = camThread("Camera 1", 1)
+    thread1 = camThread("Camera 0", 0, shareMem1)
+    thread2 = camThread("Camera 1", 1, shareMem2)
     
     q = multiprocessing.Queue()
     multiprocessing.Process(target=func,args=(thread1,)).start()
     multiprocessing.Process(target=func,args=(thread2,)).start()
-    multiprocessing.Process(target=imageProcessing,args=([thread1,thread2],)).start()
+    multiprocessing.Process(target=imageProcessing,args=([shareMem1,shareMem2],)).start()
     print("number of CPU", multiprocessing.cpu_count())
     print("Active threads", threading.activeCount())

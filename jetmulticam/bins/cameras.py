@@ -101,7 +101,6 @@ def make_v4l2_image(dev: str) -> Gst.Bin:
     src.set_property("device", dev)
 
     vidconv_cf = _make_element_safe("capsfilter")
-    # Ensure we output something nvvideoconvert has caps for
     vidconv_cf.set_property(
         "caps",
         Gst.Caps.from_string(
@@ -119,6 +118,4 @@ def make_v4l2_image(dev: str) -> Gst.Bin:
     exit_pad = _sanitize(vidconv_cf.get_static_pad("src"))
     gp = Gst.GhostPad.new(name="src", target=exit_pad)
     bin.add_pad(gp)
-
-
     return bin
