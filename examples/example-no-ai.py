@@ -1,4 +1,4 @@
-import time
+# import time
 from jetmulticam import CameraPipeline
 
 if __name__ == "__main__":

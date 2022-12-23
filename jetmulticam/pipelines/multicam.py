@@ -1,8 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-import logging  # TODO: remove
 import os
-import time
 import multiprocessing as mp
 
 # Gstreamer imports
@@ -96,15 +94,10 @@ class CameraPipeline(BasePipeline):
             ##########################################################
             ############ single thread try ###########################
             ##########################################################
-
-            # image1 = ImageCV(sample1)
-            # image2 = ImageCV(sample2)
-            # image1.showCVImage()
-            # image2.showCVImage()
-            # stitcher = ImageStitcher([image1, image2])
-            # stitcher.showImage()
+            # # Update ImageCV objects with new samples
             # self._imageCV[0].updateCVImage(sample1)
             # self._imageCV[1].updateCVImage(sample2)
+            # # Display stitched image
             # self._stitcher.showImage()
 
             #########################################################
@@ -115,9 +108,6 @@ class CameraPipeline(BasePipeline):
                 p = mp.Process(target=worker, args=(objectCV,sample,self.sharedMem))
                 jobs.append(p)
                 p.start()
-                # p2 = mp.Process(target=worker, args=(self._imageCV[1],sample2,self.sharedMem))
-                # jobs.append(p2)
-                # p2.start()
 
             # get item out of queue first before deadlock happends
             buffer = [self.sharedMem.get(), self.sharedMem.get()]
@@ -125,7 +115,6 @@ class CameraPipeline(BasePipeline):
                 process.join()
 
             self._stitcher.showImage(buffer)
-            
         except Exception as e:
             print(e)
 
