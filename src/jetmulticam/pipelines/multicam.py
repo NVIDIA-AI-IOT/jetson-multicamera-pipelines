@@ -85,7 +85,8 @@ class CameraPipeline(BasePipeline):
             for process in jobs:
                 process.join()
 
-            self._stitcher.showImage(buffer)
+            # self._stitcher.showImage(buffer)
+            self._stitcher.nextImage(buffer,saveImage=True)
         except Exception as e:
             print(e)
 

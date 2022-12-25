@@ -104,13 +104,24 @@ class ImageStitcher():
 	# 		cv2.imshow("image2", self._imageArray[1])
 	# 		cv2.imshow("output", self._result)
 	# 		cv2.waitKey(100)
-
+	def nextImage(self, imageArray=None, saveImage=True, showImage=False, dir=getcwd()):
+		
+		if (imageArray==None):
+			result = self.stitch()
+		else:
+			result = self.stitch(imageArray)
+   
+		if (showImage and result):
+			self.showImage(imageArray, saveImage)
+		elif (saveImage and result):
+			self.saveImage(dir=dir)
+		
 	def showImage(self, imageArray=None, saveImage=True):
 		if (imageArray==None):
 			result = self.stitch()
 		else:
 			result = self.stitch(imageArray)
-	
+
 		if (result):
 			cv2.imshow("image1", self._imageArray[0])
 			cv2.imshow("image2", self._imageArray[1])
@@ -118,14 +129,12 @@ class ImageStitcher():
 			cv2.waitKey(100)
 
 			if (saveImage): self.saveImage()
-
 		
-   
 	def saveImage(self, all=True, dir=getcwd()):
 		if (all):
-			cv2.imwrite(join(dir,"..","imageDir",'stitch_{}.jpg'.format(self._imageCount)), self._result)
-			cv2.imwrite(join(dir,"..","imageDir",'left_{}.jpg'.format(self._imageCount)), self._imageArray[0])
-			cv2.imwrite(join(dir,"..","imageDir",'right_{}.jpg'.format(self._imageCount)), self._imageArray[1])
+			cv2.imwrite(join(dir,"..","imageDir",'stitch.jpg'), self._result)
+			cv2.imwrite(join(dir,"..","imageDir",'left.jpg'), self._imageArray[0])
+			cv2.imwrite(join(dir,"..","imageDir",'right.jpg'), self._imageArray[1])
 		else:
-			cv2.imwrite(join(dir,"..","imageDir",'stitch_{}.jpg'.format(self._imageCount)), self._result)
+			cv2.imwrite(join(dir,"..","imageDir",'stitch.jpg'), self._result)
 		self._imageCount += 1
