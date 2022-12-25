@@ -15,40 +15,11 @@ from ..utils.gst import _make_element_safe, _sanitize
 from ..bins.cameras import make_v4l2_image
 from ..utils.ImageCV import ImageCV, ImageStitcher
 
-
-def make_conv_bin(caps="video/x-raw, format=(string)RGBA") -> Gst.Bin:
-    bin = Gst.Bin()
-
-    nvvidconv = _make_element_safe("nvvidconv")
-    conv_cf = _make_element_safe("capsfilter")
-    conv_cf.set_property(
-        "caps",
-        Gst.Caps.from_string(
-            caps
-        ),  # NOTE: make parametric? i.e. height=1080, width=1920
-    )
-
-    nvvidconv.link(conv_cf)
-
-    # We enter via conv sink pad
-    enter_pad = _sanitize(nvvidconv.get_static_pad("sink"))
-    gp_enter = _sanitize(Gst.GhostPad.new(name="sink", target=enter_pad))
-    bin.add_pad(gp_enter)
-
-    # We exit via conv_cf source pad
-    exit_pad = _sanitize(conv_cf.get_static_pad("src"))
-    gp = _sanitize(Gst.GhostPad.new(name="src", target=exit_pad))
-    bin.add_pad(gp)
-
-    return bin
-
-
 def make_appsink_configured() -> Gst.Element:
     appsink = _make_element_safe("appsink")
     appsink.set_property("max-buffers", 1)
     appsink.set_property("drop", True)
     return appsink
-
 
 class CameraPipeline(BasePipeline):
     def __init__(self, cameras, logdir="/home/tng042/logs/videos", **kwargs):

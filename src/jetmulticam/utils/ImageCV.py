@@ -117,8 +117,9 @@ class ImageStitcher():
 			cv2.imshow("output", self._result)
 			cv2.waitKey(100)
 
-		if (saveImage):
-			self.saveImage()
+			if (saveImage): self.saveImage()
+
+		
    
 	def saveImage(self, all=True, dir=getcwd()):
 		if (all):
