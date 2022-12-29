@@ -55,61 +55,132 @@ class ImageStitcher():
 		self._imageArray = list()
 		self._result = None
 		self._imageCount = 0
+  
+	# Refernce:
+	# https://colab.research.google.com/drive/11Md7HWh2ZV6_g3iCYSUw76VNr4HzxcX5#scrollTo=6eHgWAorE9gf
+	# https://towardsdatascience.com/image-panorama-stitching-with-opencv-2402bde6b46c	
+	# Image stitching speed is approximately 3 frames per second with this improved method
+	def detectAndDescribe(self, image, method='orb'):
+		"""
+		Compute key points and feature descriptors using an specific method
+		"""
 		
-	def _stitch(self):
-		try:
+		assert method is not None, "You need to define a feature detection method. Values are: 'sift', 'surf'"
+
+		# detect and extract features from the image
+		if method == 'sift':
+			descriptor = cv2.xfeatures2d.SIFT_create()
+		elif method == 'surf':
+			descriptor = cv2.xfeatures2d.SURF_create()
+		elif method == 'brisk':
+			descriptor = cv2.BRISK_create()
+		elif method == 'orb':
+			descriptor = cv2.ORB_create()
+   
+		# get keypoints and descriptors
+		(kps, features) = descriptor.detectAndCompute(image, None)
+		return (kps, features)
+	def createMatcher(self, method,crossCheck):
+		"Create and return a Matcher Object"
+		
+		if method == 'sift' or method == 'surf':
+			bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=crossCheck)
+		elif method == 'orb' or method == 'brisk':
+			bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=crossCheck)
+		return bf
+	def matchKeyPointsBF(self, featuresA, featuresB, method):
+		bf = self.createMatcher(method, crossCheck=True)
+			
+		# Match descriptors.
+		best_matches = bf.match(featuresA,featuresB)
+		
+		# Sort the features in order of distance.
+		# The points with small distance (more similarity) are ordered first in the vector
+		rawMatches = sorted(best_matches, key = lambda x:x.distance)
+		print("Raw matches (Brute force):", len(rawMatches))
+		return rawMatches
+	def matchKeyPointsKNN(self, featuresA, featuresB, ratio=0.75, method='orb'):
+		bf = self.createMatcher(method, crossCheck=False)
+		# compute the raw matches and initialize the list of actual matches
+		rawMatches = bf.knnMatch(featuresA, featuresB, 2)
+		print("Raw matches (knn):", len(rawMatches))
+		matches = []
+
+		# loop over the raw matches
+		for m,n in rawMatches:
+			# ensure the distance is within a certain ratio of each
+			# other (i.e. Lowe's ratio test)
+			if m.distance < n.distance * ratio:
+				matches.append(m)
+		return matches
+	def getHomography(self, kpsA, kpsB, featuresA, featuresB, matches, reprojThresh):
+		# convert the keypoints to numpy arrays
+		kpsA = np.float32([kp.pt for kp in kpsA])
+		kpsB = np.float32([kp.pt for kp in kpsB])
+		
+		if len(matches) > 4:
+
+			# construct the two sets of points
+			ptsA = np.float32([kpsA[m.queryIdx] for m in matches])
+			ptsB = np.float32([kpsB[m.trainIdx] for m in matches])
+			
+			# estimate the homography between the sets of points
+			(H, status) = cv2.findHomography(ptsA, ptsB, cv2.RANSAC,
+				reprojThresh)
+
+			return (matches, H, status)
+		else:
+			return None
+	def homoStitch(self, imageArray=None):
+		if (imageArray==None):
+			imageArray = list()
+			for item in self._cameras:
+				imageArray.append(item.getCVImage())
+		kpsA, featuresA = self.detectAndDescribe(imageArray[0], method='orb')
+		kpsB, featuresB = self.detectAndDescribe(imageArray[1], method='orb')
+		matches = self.matchKeyPointsKNN(featuresA, featuresB, method='orb')
+		M = self.getHomography(kpsA, kpsB, featuresA, featuresB, matches, reprojThresh=4)
+		if M is None:
+			raise Exception("Error getting Homo")
+		(matches, H, status) = M
+		width = imageArray[0].shape[1] + imageArray[1].shape[1]
+		height = imageArray[0].shape[0] + imageArray[1].shape[0]
+
+		self._result = cv2.warpPerspective(imageArray[0], H, (width, height))
+		self._result[0:imageArray[1].shape[0], 0:imageArray[1].shape[1]] = imageArray[1]
+
+		# cv2.imshow("output", result)
+		# cv2.waitKey(100)
+		self.saveImage()
+	# END OF REFERENCE
+
+	def stitch(self, imageArray=None):
+		if (type(imageArray) is list):
+			self._imageArray = imageArray
+		else:
 			for item in self._cameras:
 				self._imageArray.append(item.getCVImage())
+   
+		
+		try:
 			stitchy = cv2.createStitcher(self._mode)
 			(status, self._result) = stitchy.stitch(self._imageArray)
 			if (status == 0):
 				# all okay here
 				return True
 			elif (status == 1):
+				# cv2.imshow("image1", self._imageArray[0])
+				# cv2.waitKey(0)
+				# cv2.imshow("image2", self._imageArray[1])
+				# cv2.waitKey(0)
 				raise Exception("Error stitching: Not enough keypoints")
 			elif (status == 2):
 				raise Exception("Error stitching: Homography fail")
 		except Exception as e:
 			print(e)
-			# raise e
-		
-	def stitch(self, imageArray=None):
-		if (imageArray==None):
-			try:
-				return self._stitch()
-			except Exception as e:
-				print(e)
-		else:
-			try:
-				self._imageArray = imageArray
-				stitchy = cv2.createStitcher(self._mode)
-				(status, self._result) = stitchy.stitch(self._imageArray)
-				if (status == 0):
-					# all okay here
-					return True
-				elif (status == 1):
-					# cv2.imshow("image1", self._imageArray[0])
-					# cv2.waitKey(0)
-					# cv2.imshow("image2", self._imageArray[1])
-					# cv2.waitKey(0)
-					raise Exception("Error stitching: Not enough keypoints")
-				elif (status == 2):
-					raise Exception("Error stitching: Homography fail")
-			except Exception as e:
-				print(e)
 
-	# def _showImage(self):
-	# 	if (self.stitch()):
-	# 		cv2.imshow("image1", self._imageArray[0])
-	# 		cv2.imshow("image2", self._imageArray[1])
-	# 		cv2.imshow("output", self._result)
-	# 		cv2.waitKey(100)
 	def nextImage(self, imageArray=None, saveImage=True, showImage=False, dir=getcwd()):
-		
-		if (imageArray==None):
-			result = self.stitch()
-		else:
-			result = self.stitch(imageArray)
+		result = self.stitch(imageArray)
    
 		if (showImage and result):
 			self.showImage(imageArray, saveImage)
@@ -117,20 +188,18 @@ class ImageStitcher():
 			self.saveImage(dir=dir)
 		
 	def showImage(self, imageArray=None, saveImage=True):
-		if (imageArray==None):
-			result = self.stitch()
-		else:
-			result = self.stitch(imageArray)
+		if (type(self._result) is not np.ndarray):
+			return
+		# cv2.imshow("image1", self._imageArray[0])
+		# cv2.imshow("image2", self._imageArray[1])
+		cv2.imshow("output", self._result)
+		cv2.waitKey(100)
 
-		if (result):
-			cv2.imshow("image1", self._imageArray[0])
-			cv2.imshow("image2", self._imageArray[1])
-			cv2.imshow("output", self._result)
-			cv2.waitKey(100)
-
-			if (saveImage): self.saveImage()
+		if (saveImage): self.saveImage()
 		
 	def saveImage(self, all=True, dir=getcwd()):
+		if (type(self._result) is not np.ndarray):
+			return
 		if (all):
 			cv2.imwrite(join(dir,"..","imageDir",'stitch.jpg'), self._result)
 			cv2.imwrite(join(dir,"..","imageDir",'left.jpg'), self._imageArray[0])
