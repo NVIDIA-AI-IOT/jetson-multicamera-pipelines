@@ -57,20 +57,11 @@ class CameraPipeline(BasePipeline):
             index +=1
         return pipeline
 
-    def read(self, cam_idx):
+    def read_multiThreaded(self):
         sample1 = self._appsinks[0].emit("pull-sample")
         sample2 = self._appsinks[1].emit("pull-sample")
          
         try:
-            ##########################################################
-            ############ single thread try ###########################
-            ##########################################################
-            # # Update ImageCV objects with new samples
-            # self._imageCV[0].updateCVImage(sample1)
-            # self._imageCV[1].updateCVImage(sample2)
-            # # Display stitched image
-            # self._stitcher.showImage()
-
             #########################################################
             ############## multiprocessing implementation ###########
             #########################################################
@@ -85,7 +76,32 @@ class CameraPipeline(BasePipeline):
             for process in jobs:
                 process.join()
 
-            self._stitcher.showImage(buffer)
+            # # Display image/ save image
+            self._stitcher.homoStitch(buffer)
+            # self._stitcher.nextImage(buffer,showImage=False,saveImage=True)
+        except Exception as e:
+            print(e)
+
+    def read_singleThreaded(self):
+        sample1 = self._appsinks[0].emit("pull-sample")
+        sample2 = self._appsinks[1].emit("pull-sample")
+         
+        try:
+            ##########################################################
+            ############ single thread try ###########################
+            ##########################################################
+            # Update ImageCV objects with new samples
+            self._imageCV[0].updateCVImage(sample1)
+            self._imageCV[1].updateCVImage(sample2)
+            # Display stitched image
+            # self._stitcher.showImage()
+
+            # # Display image/ save image
+            # self._stitcher.nextImage(showImage=True, saveImage=True)
+            # self._stitcher.nextImage(buffer,showImage=False,saveImage=True)
+            # self._stitcher.stitch([self._imageCV[0].getCVImage(),self._imageCV[1].getCVImage()])
+            # self._stitcher.nextImage()
+            self._stitcher.homoStitch()
         except Exception as e:
             print(e)
 
