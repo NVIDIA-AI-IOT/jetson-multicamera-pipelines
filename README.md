@@ -15,19 +15,25 @@ We have 3 intependent cameras with ~270° field of view.
 Red Boxes correspond to DashCamNet detections, green ones to PeopleNet.
 The PeopleNet detections are used to perform person following logic.
 
-https://user-images.githubusercontent.com/26127866/134718385-9861c206-d5f9-4f67-a383-a80f28904ef1.mp4
+
+https://github.com/NVIDIA-AI-IOT/jetson-multicamera-pipelines/assets/26127866/9fe0b080-4964-49ac-b086-3cca9db01cef
+
 
 #### PeopleNet (GPU) on 3 cameras streams.
 Robot is operated in manual mode.
 
-https://user-images.githubusercontent.com/26127866/134720518-bbb98c86-71b0-46ee-a3d1-e2d65acc1b4c.mp4
+
+https://github.com/NVIDIA-AI-IOT/jetson-multicamera-pipelines/assets/26127866/e56b4acb-ce93-4f7c-b7af-eb04297b087e
+
 
 #### DashCamNet (GPU) on 3 camera streams.
 Robot is operated in manual mode.
 
-https://user-images.githubusercontent.com/26127866/134721058-8378697f-bbf0-4505-be75-f3dba3080c71.mp4
 
-(All demos are performed in real-time onboard Nvidia Jetson Xavier NX)
+https://github.com/NVIDIA-AI-IOT/jetson-multicamera-pipelines/assets/26127866/8dda2023-8d2b-41ac-8c29-890b1cfc14e9
+
+
+All demos are performed in real-time onboard Nvidia Jetson Xavier NX.
 
 ## Quickstart
 
